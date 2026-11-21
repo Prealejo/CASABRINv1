@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import {
-  LayoutDashboard, Warehouse, PackagePlus, ScanBarcode, ArrowLeftRight,
+  LayoutDashboard, Warehouse, PackagePlus, ScanBarcode,
   Tag, ClipboardList, Users, LogOut, Menu, X,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
@@ -21,16 +21,16 @@ const grupos = [
     ],
   },
   {
+    // Inventario concentra la consulta de stock y el traslado de rollos (ventana emergente).
     titulo: '2. Operación',
     items: [
-      { to: '/traslados', label: 'Traslados', Icon: ArrowLeftRight },
+      { to: '/inventario', label: 'Inventario y traslados', Icon: Warehouse },
       { to: '/escanear', label: 'Escanear / Cortar', Icon: ScanBarcode },
     ],
   },
   {
     titulo: '3. Control',
     items: [
-      { to: '/inventario', label: 'Inventario', Icon: Warehouse },
       { to: '/reportes', label: 'Movimientos y reporte', Icon: ClipboardList },
     ],
   },

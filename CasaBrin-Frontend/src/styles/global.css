@@ -259,3 +259,57 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity
   .page-head > .btn { width: 100%; }
   h1 { font-size: 1.4rem; }
 }
+
+/* ---------------- Contraseña: mostrar / ocultar ---------------- */
+.control > .input-clave { padding-right: 2.75rem; }
+.ver-clave {
+  position: absolute; right: 0.35rem; top: 50%; transform: translateY(-50%);
+  width: 2.1rem; height: 2.1rem; display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: none; border-radius: 6px; color: var(--gray-500);
+}
+.ver-clave:hover { color: var(--gray-900); background: var(--gray-100); }
+.ver-clave:focus-visible { outline: none; box-shadow: var(--focus-ring); color: var(--brand-700); }
+.ver-clave[aria-pressed="true"] { color: var(--brand-700); }
+
+/* ---------------- Requisitos de contraseña ---------------- */
+.fuerza { margin: 0 0 1rem; }
+.fuerza-barra { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 0.35rem; }
+.fuerza-barra span { height: 4px; border-radius: 4px; background: var(--gray-200); transition: background 0.2s; }
+.fuerza-barra[data-nivel="1"] span:nth-child(1) { background: var(--brand-600); }
+.fuerza-barra[data-nivel="2"] span:nth-child(-n+2) { background: var(--warn-700); }
+.fuerza-barra[data-nivel="3"] span { background: var(--ok-700); }
+.fuerza-texto { font-size: 0.76rem; font-weight: 700; }
+.fuerza-texto[data-nivel="1"] { color: var(--brand-700); }
+.fuerza-texto[data-nivel="2"] { color: var(--warn-700); }
+.fuerza-texto[data-nivel="3"] { color: var(--ok-700); }
+.fuerza-reglas { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 0.2rem 0.75rem; margin-top: 0.35rem; }
+.fuerza-reglas li { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--ink-faint); }
+.fuerza-reglas li.ok { color: var(--ok-700); font-weight: 600; }
+
+/* ---------------- Tarjeta de código de recuperación ---------------- */
+.codigo-card {
+  border: 2px dashed var(--brand-200); background: var(--brand-50); border-radius: var(--radius);
+  padding: 1rem 1.1rem; text-align: center;
+}
+.codigo-card-cab { display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.85rem; color: var(--gray-700); }
+.codigo-card-valor {
+  font-size: 1.75rem; font-weight: 700; letter-spacing: 0.12em; color: var(--brand-800);
+  margin: 0.6rem 0 0.8rem; user-select: all; word-break: break-all;
+}
+.codigo-card-acciones { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
+.codigo-card-aviso { display: flex; align-items: center; justify-content: center; gap: 0.35rem; margin-top: 0.8rem; font-size: 0.78rem; color: var(--warn-700); }
+
+/* ---------------- Aviso de seguridad (Usuarios) ---------------- */
+.aviso-seguridad {
+  display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; margin-bottom: 1rem;
+  padding: 0.85rem 1rem; border-radius: var(--radius-sm);
+  background: var(--warn-50); border: 1px solid var(--warn-200); color: var(--warn-700);
+}
+.aviso-seguridad > div { flex: 1; min-width: 220px; }
+.aviso-seguridad p { font-size: 0.85rem; color: var(--gray-700); margin-top: 0.1rem; }
+
+/* ---------------- Utilidades ---------------- */
+.btn-grande { height: 3rem; font-size: 0.98rem; }
+.girando { animation: girar 0.8s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .girando { animation: none; } }

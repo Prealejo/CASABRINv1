@@ -327,7 +327,7 @@ export default function IngresoMercaderia() {
           <div className="siguiente-paso no-print mb">
             <span className="siguiente-paso-texto"><Tag {...ICONO_SM} aria-hidden="true" />Siguiente paso: etiquetar los rollos y, si van a venta, trasladarlos al local.</span>
             <div className="siguiente-paso-acciones">
-              <Link to="/traslados" className="btn btn-secondary btn-sm"><ArrowLeftRight size={14} strokeWidth={2} aria-hidden="true" />Ir a Traslados</Link>
+              <Link to="/inventario" className="btn btn-secondary btn-sm"><ArrowLeftRight size={14} strokeWidth={2} aria-hidden="true" />Trasladar desde Inventario</Link>
               <Link to={`/reportes?tela=${resultado.idTela}&tipo=Ingreso`} className="btn btn-ghost btn-sm"><ClipboardList size={14} strokeWidth={2} aria-hidden="true" />Ver ingresos de esta tela</Link>
             </div>
           </div>

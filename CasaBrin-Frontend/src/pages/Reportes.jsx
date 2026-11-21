@@ -464,7 +464,7 @@ export default function Reportes() {
 
       {aplicados.rollo && rollo && (
         <p className="no-print texto-ayuda" style={{ marginTop: '1rem' }}>
-          <Link to={`/escanear`}>Ir a Escanear / Cortar</Link> · <Link to="/traslados">Ir a Traslados</Link>
+          <Link to={`/escanear`}>Ir a Escanear / Cortar</Link> · <Link to="/inventario">Trasladar desde Inventario</Link>
         </p>
       )}
     </div>

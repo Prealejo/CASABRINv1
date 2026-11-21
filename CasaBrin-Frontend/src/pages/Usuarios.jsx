@@ -3,9 +3,14 @@ import { api } from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
 import {
   UserPlus, Users, User, IdCard, Mail, Shield, ShieldCheck, Lock, KeyRound, Pencil, UserX,
-  CircleCheck, CircleMinus, CircleDot, Save,
+  CircleCheck, CircleMinus, CircleDot, Save, TriangleAlert, RotateCcw,
 } from 'lucide-react'
 import Campo from '../components/Campo.jsx'
+import ContrasenaInput from '../components/ContrasenaInput.jsx'
+import FuerzaContrasena from '../components/FuerzaContrasena.jsx'
+import Modal from '../components/Modal.jsx'
+import CodigoRecuperacionCard from '../components/CodigoRecuperacionCard.jsx'
+import { errorContrasena } from '../lib/contrasena.js'
 import { ICONO, ICONO_SM, Vacio, Cargando, Mensaje } from '../components/ui.jsx'
 import './pages.css'
 
@@ -26,6 +31,11 @@ export default function Usuarios() {
 
   const [passId, setPassId] = useState(null)
   const [pass, setPass] = useState('')
+  const [errPass, setErrPass] = useState('')
+
+  // Código de recuperación recién generado (se muestra una sola vez en un modal).
+  const [codigo, setCodigo] = useState(null)        // { usuario, codigo, nuevo }
+  const [generando, setGenerando] = useState(null)  // id del usuario en proceso
 
   async function cargar() {
     setCargando(true)
@@ -66,14 +76,16 @@ export default function Usuarios() {
     if (modo === 'crear') {
       if (!form.nombreUsuario.trim() || form.nombreUsuario.trim().length < 3) return setError('El usuario debe tener al menos 3 caracteres.')
       if (!form.nombreCompleto.trim()) return setError('Escribe el nombre completo.')
-      if (!form.contrasena || form.contrasena.length < 6) return setError('La contraseña debe tener al menos 6 caracteres.')
+      if (/\s/.test(form.nombreUsuario.trim())) return setError('El usuario no puede llevar espacios.')
+      const ec = errorContrasena(form.contrasena, form.nombreUsuario)
+      if (ec) return setError(ec)
     } else {
       if (!form.nombreCompleto.trim()) return setError('Escribe el nombre completo.')
     }
     setGuardando(true)
     try {
       if (modo === 'crear') {
-        await api.post('/usuarios', {
+        const { data: creado } = await api.post('/usuarios', {
           nombreUsuario: form.nombreUsuario.trim(),
           nombreCompleto: form.nombreCompleto.trim(),
           correo: form.correo.trim() || null,
@@ -81,6 +93,11 @@ export default function Usuarios() {
           rol: form.rol,
         })
         setOk('Usuario creado correctamente.')
+        // Todo usuario nuevo recibe su código de recuperación para entregárselo impreso.
+        try {
+          const { data } = await api.post(`/usuarios/${creado.idUsuario}/codigo-recuperacion`)
+          setCodigo({ usuario: creado.nombreUsuario, codigo: data.codigo, nuevo: true })
+        } catch { /* el admin puede generarlo después con el botón «Código» */ }
       } else {
         await api.put(`/usuarios/${editId}`, {
           nombreCompleto: form.nombreCompleto.trim(),
@@ -113,16 +130,40 @@ export default function Usuarios() {
   }
 
   async function guardarPass() {
-    if (!pass || pass.length < 6) return setError('La contraseña debe tener al menos 6 caracteres.')
-    setError(''); setOk('')
+    const u = usuarios.find((x) => x.idUsuario === passId)
+    const ec = errorContrasena(pass, u?.nombreUsuario)
+    if (ec) { setErrPass(ec); return }
+    setErrPass(''); setError(''); setOk('')
     try {
       await api.put(`/usuarios/${passId}/password`, { nuevaContrasena: pass })
-      setOk('Contraseña actualizada.')
+      setOk(`Contraseña temporal asignada a ${u?.nombreUsuario}. Al ingresar, el sistema le pedirá crear una nueva.`)
       setPassId(null); setPass('')
+      await cargar()
     } catch (e) {
-      setError(e.message)
+      setErrPass(e.message)
     }
   }
+
+  async function generarCodigo(u) {
+    const reemplaza = u.tieneCodigoRecuperacion
+      ? `\n\nEl código anterior de ${u.nombreUsuario} dejará de funcionar.`
+      : ''
+    if (!confirm(`¿Generar un código de recuperación para ${u.nombreCompleto}?${reemplaza}`)) return
+    setError(''); setOk('')
+    setGenerando(u.idUsuario)
+    try {
+      const { data } = await api.post(`/usuarios/${u.idUsuario}/codigo-recuperacion`)
+      setCodigo({ usuario: u.nombreUsuario, codigo: data.codigo, nuevo: false })
+      await cargar()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setGenerando(null)
+    }
+  }
+
+  const yoSinCodigo = usuarios.some((u) => u.idUsuario === user?.idUsuario && !u.tieneCodigoRecuperacion)
+  const yo = usuarios.find((u) => u.idUsuario === user?.idUsuario)
 
   const usuarioPass = usuarios.find((u) => u.idUsuario === passId)
 
@@ -141,6 +182,19 @@ export default function Usuarios() {
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}
       {ok && <Mensaje tipo="ok">{ok}</Mensaje>}
+
+      {yoSinCodigo && yo && (
+        <div className="aviso-seguridad">
+          <TriangleAlert {...ICONO} aria-hidden="true" />
+          <div>
+            <strong>Aún no tienes código de recuperación.</strong>
+            <p>Sin correo, es la única forma de recuperar tu cuenta de administrador si olvidas la contraseña. Genéralo e imprímelo.</p>
+          </div>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => generarCodigo(yo)}>
+            <KeyRound size={14} strokeWidth={2} aria-hidden="true" />Generar mi código
+          </button>
+        </div>
+      )}
 
       <div className="usuarios-grid">
         {/* -------- Lista -------- */}
@@ -168,6 +222,14 @@ export default function Usuarios() {
                           <span>{u.nombreCompleto}</span>
                           <small className="mono">{u.nombreUsuario}</small>
                           {u.correo && <small>{u.correo}</small>}
+                          <span className="chips" style={{ marginTop: 4 }}>
+                            {!u.tieneCodigoRecuperacion && (
+                              <span className="badge badge-alerta"><TriangleAlert size={12} strokeWidth={2} aria-hidden="true" />Sin código</span>
+                            )}
+                            {u.debeCambiarContrasena && (
+                              <span className="badge badge-info"><RotateCcw size={12} strokeWidth={2} aria-hidden="true" />Clave temporal</span>
+                            )}
+                          </span>
                         </div>
                       </td>
                       <td>
@@ -194,10 +256,19 @@ export default function Usuarios() {
                           <button
                             type="button"
                             className="btn btn-ghost btn-sm"
-                            onClick={() => { setPassId(u.idUsuario); setPass(''); setError(''); setOk('') }}
-                            aria-label={`Cambiar clave de ${u.nombreCompleto}`}
+                            onClick={() => { setPassId(u.idUsuario); setPass(''); setErrPass(''); setError(''); setOk('') }}
+                            aria-label={`Asignar contraseña temporal a ${u.nombreCompleto}`}
                           >
-                            <KeyRound size={14} strokeWidth={2} aria-hidden="true" />Clave
+                            <Lock size={14} strokeWidth={2} aria-hidden="true" />Clave
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => generarCodigo(u)}
+                            disabled={generando === u.idUsuario}
+                            aria-label={`Generar código de recuperación de ${u.nombreCompleto}`}
+                          >
+                            <KeyRound size={14} strokeWidth={2} aria-hidden="true" />{generando === u.idUsuario ? '…' : 'Código'}
                           </button>
                           {u.activo && u.idUsuario !== user?.idUsuario && (
                             <button type="button" className="btn btn-danger-ghost btn-sm" onClick={() => desactivar(u)} aria-label={`Dar de baja a ${u.nombreCompleto}`}>
@@ -244,9 +315,12 @@ export default function Usuarios() {
             </select>
           </Campo>
           {modo === 'crear' && (
-            <Campo label="Contraseña" icon={Lock} requerido ayuda="Mínimo 6 caracteres.">
-              <input type="password" value={form.contrasena} onChange={(e) => setForm({ ...form, contrasena: e.target.value })} placeholder="••••••" autoComplete="new-password" />
-            </Campo>
+            <>
+              <Campo label="Contraseña" icon={Lock} requerido style={{ marginBottom: '0.5rem' }}>
+                <ContrasenaInput value={form.contrasena} onChange={(e) => setForm({ ...form, contrasena: e.target.value })} autoComplete="new-password" />
+              </Campo>
+              <FuerzaContrasena clave={form.contrasena} usuario={form.nombreUsuario} />
+            </>
           )}
           {modo === 'editar' && (
             <Campo label="Estado" icon={CircleDot}>
@@ -267,26 +341,54 @@ export default function Usuarios() {
         </div>
       </div>
 
-      {/* -------- Mini panel cambiar contraseña -------- */}
-      {passId && (
-        <div className="card" style={{ marginTop: '1.25rem', maxWidth: 440 }}>
-          <div className="seccion-titulo" style={{ marginBottom: '0.9rem' }}>
-            <span className="titulo-icono">
-              <KeyRound {...ICONO} aria-hidden="true" />
-              Cambiar contraseña{usuarioPass ? `: ${usuarioPass.nombreUsuario}` : ''}
-            </span>
-          </div>
-          <Campo label="Nueva contraseña" icon={Lock} ayuda="Mínimo 6 caracteres.">
-            <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="••••••" autoComplete="new-password" autoFocus />
-          </Campo>
-          <div style={{ display: 'flex', gap: '0.6rem' }}>
-            <button type="button" className="btn btn-primary" onClick={guardarPass}>
-              <Save size={16} strokeWidth={1.75} aria-hidden="true" />Actualizar
-            </button>
+      {/* -------- Modal: contraseña temporal -------- */}
+      <Modal
+        abierto={!!passId}
+        titulo={`Contraseña temporal${usuarioPass ? `: ${usuarioPass.nombreUsuario}` : ''}`}
+        icono={Lock}
+        onCerrar={() => { setPassId(null); setPass('') }}
+        ancho={460}
+        pie={(
+          <>
             <button type="button" className="btn btn-ghost" onClick={() => { setPassId(null); setPass('') }}>Cancelar</button>
-          </div>
-        </div>
-      )}
+            <button type="submit" form="form-clave" className="btn btn-primary">
+              <Save size={16} strokeWidth={1.75} aria-hidden="true" />Asignar contraseña
+            </button>
+          </>
+        )}
+      >
+        <form id="form-clave" onSubmit={(e) => { e.preventDefault(); guardarPass() }} noValidate>
+          <p className="texto-ayuda">
+            Úsalo cuando el usuario perdió su código de recuperación. Al ingresar con esta contraseña,
+            el sistema le pedirá crear una propia.
+          </p>
+          <Campo label="Contraseña temporal" icon={Lock} requerido error={errPass} style={{ marginBottom: '0.5rem' }}>
+            <ContrasenaInput value={pass} onChange={(e) => { setPass(e.target.value); setErrPass('') }} autoComplete="new-password" />
+          </Campo>
+          <FuerzaContrasena clave={pass} usuario={usuarioPass?.nombreUsuario} />
+        </form>
+      </Modal>
+
+      {/* -------- Modal: código de recuperación generado -------- */}
+      <Modal
+        abierto={!!codigo}
+        titulo="Código de recuperación"
+        icono={KeyRound}
+        onCerrar={() => setCodigo(null)}
+        ancho={460}
+        pie={<button type="button" className="btn btn-primary" onClick={() => setCodigo(null)}>Listo, ya lo guardé</button>}
+      >
+        {codigo && (
+          <>
+            <p className="texto-ayuda">
+              {codigo.nuevo ? 'Usuario creado. ' : ''}
+              Entrega este código a <strong>{codigo.usuario}</strong> (impreso o anotado). Con él podrá crear
+              una nueva contraseña desde «¿Olvidaste tu contraseña?» sin necesidad de correo.
+            </p>
+            <CodigoRecuperacionCard codigo={codigo.codigo} usuario={codigo.usuario} />
+          </>
+        )}
+      </Modal>
     </div>
   )
 }

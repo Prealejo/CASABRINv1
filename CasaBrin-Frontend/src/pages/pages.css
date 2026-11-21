@@ -426,3 +426,35 @@
 /* Componentes compuestos dentro de <Campo> ocupan todo el ancho */
 .control > .combo, .control > .tela-elegida, .control > .stepper { flex: 1; width: 100%; min-width: 0; }
 @media (max-width: 640px) { .tabla-rollos td::before { font-family: var(--font-sans); letter-spacing: 0; } }
+
+/* Acciones del encabezado (varios botones) */
+.acciones-cab { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* Traslado en ventana emergente */
+.traslado-rollo {
+  border: 1px solid var(--line); border-top: 3px solid var(--brand-600);
+  border-radius: var(--radius-sm); padding: 0.85rem 1rem 0.6rem; margin-bottom: 1rem;
+}
+.traslado-rollo-cab { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.4rem; }
+@media (max-width: 640px) {
+  .acciones-cab { width: 100%; }
+  .acciones-cab .btn { flex: 1; }
+}
+
+/* Usuarios: acciones en dos columnas para que quepan las cuatro */
+.tabla-usuarios .acciones-tabla { display: grid; grid-template-columns: repeat(2, auto); justify-content: end; gap: 0.35rem; }
+
+/* Metraje del rollo: cifra actual + barra de cuánto queda */
+.metraje { display: flex; flex-direction: column; gap: 0.3rem; min-width: 120px; }
+.metraje-texto { font-size: 0.86rem; white-space: nowrap; }
+.metraje-texto strong { font-size: 0.92rem; }
+.metraje-barra { display: block; height: 5px; border-radius: 5px; background: var(--gray-200); overflow: hidden; max-width: 140px; }
+.metraje-barra > span { display: block; height: 100%; background: var(--ok-700); border-radius: 5px; }
+
+/* Mover a Bodega/Local: acción de traslado con destino explícito */
+.btn-mover { color: var(--info-700); border-color: var(--info-200); background: var(--info-50); }
+.btn-mover:hover:not(:disabled) { background: #e2e9f6; color: var(--info-700); }
+@media (max-width: 640px) {
+  .tabla-rollos .metraje { align-items: flex-end; }
+  .tabla-rollos .metraje-barra { width: 120px; }
+}

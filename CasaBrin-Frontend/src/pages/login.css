@@ -1,39 +1,79 @@
-.login-wrap { display: grid; grid-template-columns: 1.1fr 1fr; min-height: 100vh; }
+/* =====================================================================
+   Pantallas de acceso: login, recuperación y cambio de contraseña
+   ===================================================================== */
+.login-wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); min-height: 100vh; background: var(--white); }
 
-/* Panel de marca: rojo del logo */
+/* ---------- Panel de marca con trama textil ---------- */
 .login-arte {
-  background: linear-gradient(155deg, var(--brand-700) 0%, var(--brand-600) 55%, var(--brand-500) 100%);
-  color: var(--white); display: grid; place-items: center; padding: 3rem; position: relative; overflow: hidden;
+  position: relative; overflow: hidden; display: grid; place-items: center; padding: 3rem;
+  background: var(--brand-700); color: var(--white);
 }
-.login-arte::before {
-  content: ''; position: absolute; inset: 0;
-  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 14px);
+/* Tejido tipo tafetán: hilos de trama y urdimbre cruzados, en los rojos de la marca. */
+.login-trama {
+  position: absolute; inset: -10%;
+  background-color: #b3141a;
+  background-image:
+    repeating-linear-gradient(0deg,
+      rgba(255, 255, 255, 0.10) 0 6px, rgba(0, 0, 0, 0) 6px 12px),
+    repeating-linear-gradient(90deg,
+      rgba(120, 8, 12, 0.55) 0 6px, rgba(0, 0, 0, 0) 6px 12px),
+    repeating-linear-gradient(45deg,
+      rgba(255, 255, 255, 0.04) 0 2px, rgba(0, 0, 0, 0) 2px 4px);
+  transform: rotate(-8deg) scale(1.1);
 }
-.login-arte-contenido { position: relative; max-width: 380px; }
+/* Luz y sombra para dar volumen de tela */
+.login-arte::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 20% 10%, rgba(255, 255, 255, 0.18), transparent 55%),
+    radial-gradient(120% 90% at 90% 100%, rgba(60, 0, 4, 0.55), transparent 60%);
+}
+.login-arte-contenido { position: relative; z-index: 1; max-width: 400px; width: 100%; }
 .login-logo {
-  width: 100%; max-width: 320px; margin-bottom: 1.75rem;
-  background: var(--white); border-radius: 16px; padding: 1rem 1.1rem;
-  box-shadow: 0 16px 36px rgba(60, 0, 0, 0.3);
+  background: var(--white); border-radius: 18px; padding: 1.1rem 1.25rem; margin-bottom: 1.75rem;
+  box-shadow: 0 18px 40px rgba(50, 0, 3, 0.35); max-width: 330px;
 }
 .login-logo img { display: block; width: 100%; height: auto; }
-.login-logo-movil { display: none; }
-.login-arte p { color: rgba(255,255,255,0.92); font-size: 1.05rem; line-height: 1.6; }
-.login-features { list-style: none; margin-top: 1.75rem; display: flex; flex-direction: column; gap: 0.8rem; }
-.login-features li { display: flex; align-items: center; gap: 0.7rem; color: var(--white); font-size: 0.95rem; }
-.login-features li svg { flex-shrink: 0; opacity: 0.9; }
-
-.login-form-lado { display: grid; place-items: center; padding: 2rem; background: var(--white); }
-.login-form { width: 100%; max-width: 360px; }
-.login-form h2 { font-size: 1.6rem; }
-.login-form-sub { color: var(--ink-soft); margin: 0.25rem 0 1.6rem; font-size: 0.92rem; }
-.login-form .btn { margin-top: 0.4rem; }
-.login-hint {
-  margin-top: 1.4rem; font-size: 0.8rem; color: var(--ink-faint); text-align: center;
-  background: var(--gray-50); border: 1px solid var(--line); padding: 0.6rem; border-radius: var(--radius-sm);
+.login-lema { font-size: 1.15rem; font-weight: 600; line-height: 1.5; color: var(--white); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+.login-features { list-style: none; margin-top: 1.4rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.login-features li {
+  display: flex; align-items: center; gap: 0.7rem; font-size: 0.95rem; color: var(--white);
+  background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 0.55rem 0.8rem; border-radius: 10px; backdrop-filter: blur(2px);
 }
+.login-features svg { flex-shrink: 0; }
 
-@media (max-width: 780px) {
+/* ---------- Panel del formulario ---------- */
+.login-form-lado { display: grid; place-items: center; padding: 2.5rem 2rem; background: var(--white); }
+.login-panel { width: 100%; max-width: 400px; }
+.login-logo-movil { display: none; }
+.login-form { width: 100%; }
+.login-titulo { font-size: 1.75rem; margin-bottom: 0.35rem; }
+.login-form-sub { color: var(--ink-soft); margin-bottom: 1.6rem; font-size: 0.93rem; line-height: 1.55; }
+.login-olvido { display: flex; justify-content: flex-end; margin: -0.35rem 0 1.1rem; }
+.login-olvido a { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.86rem; font-weight: 600; }
+.volver {
+  display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.86rem; font-weight: 600;
+  margin-bottom: 1.1rem; color: var(--gray-700);
+}
+.volver:hover { color: var(--brand-700); }
+.exito-icono {
+  width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 1rem;
+  background: var(--ok-50); color: var(--ok-700); border: 1px solid var(--ok-200);
+}
+.ayuda-sin-codigo {
+  display: flex; gap: 0.7rem; margin-top: 1.4rem; padding: 0.9rem 1rem;
+  background: var(--gray-50); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  font-size: 0.85rem; color: var(--ink-soft);
+}
+.ayuda-sin-codigo svg { flex-shrink: 0; color: var(--gray-500); margin-top: 2px; }
+.ayuda-sin-codigo strong { color: var(--ink); display: block; margin-bottom: 0.15rem; }
+.input-codigo { letter-spacing: 0.12em; text-transform: uppercase; }
+
+@media (max-width: 860px) {
   .login-wrap { grid-template-columns: 1fr; }
   .login-arte { display: none; }
-  .login-logo-movil { display: block; width: 200px; height: auto; margin: 0 auto 1.5rem; }
+  .login-form-lado { place-items: start center; padding: 1.75rem 1.25rem 2.5rem; }
+  .login-logo-movil { display: block; width: 210px; height: auto; margin: 0 auto 1.5rem; }
+  .login-titulo { font-size: 1.5rem; }
 }

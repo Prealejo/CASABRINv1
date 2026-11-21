@@ -15,6 +15,12 @@ public class Usuario
     public bool Activo { get; set; } = true;
     public DateTime FechaCreacion { get; set; }
     public DateTime? FechaActualizacion { get; set; }
+
+    // --- Seguridad de acceso y recuperacion sin correo ---
+    public string? CodigoRecuperacionHash { get; set; }      // hash BCrypt del codigo de un solo uso
+    public bool DebeCambiarContrasena { get; set; }          // true tras una clave temporal del Admin
+    public int IntentosFallidos { get; set; }                // intentos fallidos consecutivos
+    public DateTime? BloqueadoHasta { get; set; }            // bloqueo temporal (UTC)
 }
 
 public class Proveedor

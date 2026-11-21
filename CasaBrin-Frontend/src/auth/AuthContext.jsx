@@ -29,10 +29,19 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  // Actualiza los datos guardados del usuario (p. ej. tras cambiar una clave temporal).
+  function actualizarUsuario(datos) {
+    setUser((u) => {
+      const nuevo = { ...u, ...datos }
+      localStorage.setItem('cb_user', JSON.stringify(nuevo))
+      return nuevo
+    })
+  }
+
   const esAdmin = user?.rol === 'Admin'
 
   return (
-    <AuthContext.Provider value={{ user, esAdmin, cargando, login, logout }}>
+    <AuthContext.Provider value={{ user, esAdmin, cargando, login, logout, actualizarUsuario }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using CasaBrin.Api.Auth;
 using CasaBrin.Api.Common;
 using CasaBrin.Api.Data;
@@ -54,6 +55,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // ---------------------------------------------------------------------
+//  Limite de peticiones en endpoints de acceso (anti fuerza bruta por IP).
+//  Complementa el bloqueo por cuenta (5 intentos fallidos = 15 min).
+// ---------------------------------------------------------------------
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy("auth", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "desconocido",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    o.OnRejected = async (ctx, ct) =>
+    {
+        ctx.HttpContext.Response.ContentType = "application/json";
+        await ctx.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            status = 429,
+            detail = "Demasiados intentos seguidos. Espera un minuto e intenta de nuevo."
+        }, ct);
+    };
+});
+
+// ---------------------------------------------------------------------
 //  CORS (RF-15: web + movil consumen la misma API)
 // ---------------------------------------------------------------------
 var origenes = builder.Configuration.GetSection("Cors:OrigenesPermitidos").Get<string[]>() ?? Array.Empty<string>();
@@ -101,6 +123,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("CasaBrinCors");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

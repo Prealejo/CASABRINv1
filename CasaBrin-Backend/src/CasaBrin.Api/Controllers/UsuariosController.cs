@@ -36,6 +36,11 @@ public class UsuariosController : ControllerBase
         return NoContent();
     }
 
+    // Genera el codigo de recuperacion de un usuario (se muestra una sola vez; invalida el anterior).
+    [HttpPost("{id:int}/codigo-recuperacion")]
+    public async Task<ActionResult<CodigoRecuperacionResponse>> GenerarCodigoRecuperacion(int id)
+        => Ok(await _auth.GenerarCodigoRecuperacionAsync(id));
+
     // Baja logica (se desactiva para conservar la trazabilidad de movimientos).
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Desactivar(int id)

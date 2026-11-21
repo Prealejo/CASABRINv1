@@ -24,6 +24,14 @@ export function EstadoBadge({ estado }) {
 }
 
 /* ---------- Ubicación: Bodega / Local ---------- */
+// Bodega = almacén, Local = tienda; cualquier otra ubicación = marcador.
+export function iconoUbicacion(nombre) {
+  const n = (nombre || '').toLowerCase()
+  if (n.includes('bodega')) return Warehouse
+  if (n.includes('local')) return Store
+  return MapPin
+}
+
 export function UbicacionBadge({ nombre }) {
   const n = (nombre || '').toLowerCase()
   const esBodega = n.includes('bodega')

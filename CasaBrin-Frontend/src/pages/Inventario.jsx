@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Search, MapPin, ChevronRight, Layers, Cylinder, Barcode, PackagePlus, SearchX, Route, Truck,
+  Search, MapPin, ChevronRight, Layers, Cylinder, Barcode, PackagePlus, SearchX, History, Truck,
   Pencil, Scissors, ArrowLeftRight, SwatchBook, Palette, Shapes, TriangleAlert, Save, X,
 } from 'lucide-react'
 import { api } from '../api/client.js'
@@ -9,8 +9,9 @@ import { fmtMetros, fmtNum, fmtSoloFecha } from '../lib/format.js'
 import Campo from '../components/Campo.jsx'
 import Modal from '../components/Modal.jsx'
 import ProveedorCampo from '../components/ProveedorCampo.jsx'
+import TrasladoModal from '../components/TrasladoModal.jsx'
 import {
-  ICONO, ICONO_SM, EstadoBadge, UbicacionBadge, StockBajoBadge, CodigoColorBadge, ProveedorTexto,
+  ICONO, ICONO_SM, EstadoBadge, UbicacionBadge, StockBajoBadge, CodigoColorBadge, ProveedorTexto, iconoUbicacion,
   Vacio, Cargando, Mensaje,
 } from '../components/ui.jsx'
 import './pages.css'
@@ -46,6 +47,9 @@ export default function Inventario() {
   const [errForm, setErrForm] = useState({})
   const [errModal, setErrModal] = useState('')
   const [guardando, setGuardando] = useState(false)
+
+  // Traslado (ventana emergente). codigo = null → se escanea dentro del modal.
+  const [traslado, setTraslado] = useState({ abierto: false, codigo: null })
 
   async function cargar(texto) {
     setCargando(true)
@@ -164,6 +168,14 @@ export default function Inventario() {
     }
   }
 
+  async function alTrasladar(rollo, nombreDestino) {
+    setTraslado({ abierto: false, codigo: null })
+    setError('')
+    setOk(`Rollo ${rollo.codigoBarras} (${rollo.telaNombre}) trasladado a ${nombreDestino}. Quedó registrado en su historial.`)
+    await cargar(buscar.trim())
+    if (detalles[rollo.idTela]) cargarDetalle(rollo.idTela)
+  }
+
   const hayFiltros = buscar || filtroUbic || filtroProv
 
   return (
@@ -171,12 +183,18 @@ export default function Inventario() {
       <div className="page-head">
         <div>
           <h1>Inventario</h1>
-          <p>Cada tela con su código, código de color y proveedor. Expande una para ver sus rollos.</p>
+          <p>Cada tela con su código, código de color y proveedor. Expande una para ver, cortar o trasladar sus rollos.</p>
         </div>
-        <Link to="/ingreso" className="btn btn-primary">
-          <PackagePlus {...ICONO} aria-hidden="true" />
-          Ingresar mercadería
-        </Link>
+        <div className="acciones-cab">
+          <button type="button" className="btn btn-secondary" onClick={() => { setOk(''); setTraslado({ abierto: true, codigo: null }) }}>
+            <ArrowLeftRight {...ICONO} aria-hidden="true" />
+            Trasladar rollo
+          </button>
+          <Link to="/ingreso" className="btn btn-primary">
+            <PackagePlus {...ICONO} aria-hidden="true" />
+            Ingresar mercadería
+          </Link>
+        </div>
       </div>
 
       <div className="card mb">
@@ -257,11 +275,11 @@ export default function Inventario() {
                       {t.bajoStock && <StockBajoBadge />}
                     </span>
                     <span className="acordeon-meta">
-                      <span className="mono"><Barcode {...ICONO_SM} aria-hidden="true" />{t.codigo}</span>
+                      <span className="mono" title="Código de la tela"><Barcode {...ICONO_SM} aria-hidden="true" /><span className="sr-only">Código </span>{t.codigo}</span>
                       <CodigoColorBadge codigo={t.codigoColor} />
                       <ProveedorTexto nombre={t.proveedor} />
-                      {t.diseno && <span><Shapes {...ICONO_SM} aria-hidden="true" />{t.diseno}</span>}
-                      <span><Cylinder {...ICONO_SM} aria-hidden="true" />{fmtNum(t.rollosDisponibles)} rollos</span>
+                      {t.diseno && <span title="Diseño"><Shapes {...ICONO_SM} aria-hidden="true" /><span className="sr-only">Diseño </span>{t.diseno}</span>}
+                      <span title="Rollos disponibles"><Cylinder {...ICONO_SM} aria-hidden="true" />{fmtNum(t.rollosDisponibles)} {Number(t.rollosDisponibles) === 1 ? 'rollo' : 'rollos'}</span>
                     </span>
                   </span>
                   <span className="acordeon-metros">
@@ -306,8 +324,7 @@ export default function Inventario() {
                           <tr>
                             <th>Código de barras</th>
                             <th>Ubicación</th>
-                            <th className="num">Metros actuales</th>
-                            <th className="num">Metros iniciales</th>
+                            <th>Metros</th>
                             <th>Estado</th>
                             <th>Ingreso</th>
                             <th className="num">Acciones</th>
@@ -316,12 +333,25 @@ export default function Inventario() {
                         <tbody>
                           {rollosMostrados.map((r) => {
                             const cod = encodeURIComponent(r.codigoBarras)
+                            // Destino del traslado: con Bodega/Local es siempre "la otra" ubicación.
+                            const otras = ubicaciones.filter((u) => u.idUbicacion !== r.idUbicacion)
+                            const destino = otras.length === 1 ? otras[0].nombre : null
+                            const IconoDestino = iconoUbicacion(destino)
+                            const ini = Number(r.metrosIniciales) || 0
+                            const pct = ini > 0 ? Math.max(0, Math.min(100, (Number(r.metrosActuales) / ini) * 100)) : 0
                             return (
                               <tr key={r.idRollo}>
                                 <td data-label="Código" className="mono celda-titulo">{r.codigoBarras}</td>
                                 <td data-label="Ubicación"><UbicacionBadge nombre={r.ubicacion} /></td>
-                                <td data-label="Metros actuales" className="mono num"><strong>{fmtMetros(r.metrosActuales)}</strong></td>
-                                <td data-label="Metros iniciales" className="mono num tenue">{fmtMetros(r.metrosIniciales)}</td>
+                                <td data-label="Metros">
+                                  <div className="metraje" title={`Quedan ${fmtMetros(r.metrosActuales)} de ${fmtMetros(r.metrosIniciales)}`}>
+                                    <span className="metraje-texto">
+                                      <strong className="mono">{fmtMetros(r.metrosActuales)}</strong>
+                                      <span className="tenue"> de {fmtMetros(r.metrosIniciales)}</span>
+                                    </span>
+                                    <span className="metraje-barra" aria-hidden="true"><span style={{ width: `${pct}%` }} /></span>
+                                  </div>
+                                </td>
                                 <td data-label="Estado"><EstadoBadge estado={r.estado} /></td>
                                 <td data-label="Ingreso" className="nowrap">{fmtSoloFecha(r.fechaIngreso)}</td>
                                 <td className="num celda-acciones">
@@ -332,12 +362,20 @@ export default function Inventario() {
                                       </Link>
                                     )}
                                     {r.estado !== 'Anulado' && (
-                                      <Link to={`/traslados?codigo=${cod}`} className="btn btn-ghost btn-sm accion-secundaria" aria-label={`Trasladar el rollo ${r.codigoBarras}`} title="Trasladar">
-                                        <ArrowLeftRight size={14} strokeWidth={2} aria-hidden="true" /><span className="solo-movil">Trasladar</span>
-                                      </Link>
+                                      <button
+                                        type="button"
+                                        className="btn btn-secondary btn-sm btn-mover"
+                                        onClick={() => { setOk(''); setTraslado({ abierto: true, codigo: r.codigoBarras }) }}
+                                        aria-label={destino ? `Trasladar el rollo ${r.codigoBarras} a ${destino}` : `Trasladar el rollo ${r.codigoBarras}`}
+                                        title={destino ? `Trasladar de ${r.ubicacion} a ${destino}` : 'Trasladar a otra ubicación'}
+                                      >
+                                        {destino
+                                          ? <><IconoDestino size={14} strokeWidth={2} aria-hidden="true" />Mover a {destino}</>
+                                          : <><ArrowLeftRight size={14} strokeWidth={2} aria-hidden="true" />Trasladar</>}
+                                      </button>
                                     )}
-                                    <Link to={`/reportes?rollo=${cod}`} className="btn btn-ghost btn-sm accion-secundaria" aria-label={`Ver historial del rollo ${r.codigoBarras}`} title="Historial">
-                                      <Route size={14} strokeWidth={2} aria-hidden="true" /><span className="solo-movil">Historial</span>
+                                    <Link to={`/reportes?rollo=${cod}`} className="btn btn-ghost btn-sm" aria-label={`Ver historial del rollo ${r.codigoBarras}`} title="Ver todos los movimientos de este rollo">
+                                      <History size={14} strokeWidth={2} aria-hidden="true" />Historial
                                     </Link>
                                   </div>
                                 </td>
@@ -354,6 +392,15 @@ export default function Inventario() {
           )
         })
       )}
+
+      {/* -------- Modal: trasladar rollo -------- */}
+      <TrasladoModal
+        abierto={traslado.abierto}
+        codigoInicial={traslado.codigo}
+        ubicaciones={ubicaciones}
+        onCerrar={() => setTraslado({ abierto: false, codigo: null })}
+        onTrasladado={alTrasladar}
+      />
 
       {/* -------- Modal: editar ficha de la tela -------- */}
       <Modal

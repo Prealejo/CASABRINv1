@@ -112,7 +112,7 @@ export default function Etiquetas() {
           <div className="siguiente-paso no-print mb" style={{ marginTop: 0 }}>
             <span className="siguiente-paso-texto"><ArrowLeftRight {...ICONO_SM} aria-hidden="true" />Con los rollos etiquetados, muévelos a donde se venden.</span>
             <div className="siguiente-paso-acciones">
-              <Link to="/traslados" className="btn btn-secondary btn-sm"><ArrowLeftRight size={14} strokeWidth={2} aria-hidden="true" />Ir a Traslados</Link>
+              <Link to="/inventario" className="btn btn-secondary btn-sm"><ArrowLeftRight size={14} strokeWidth={2} aria-hidden="true" />Trasladar desde Inventario</Link>
             </div>
           </div>
           <div className="etiquetas-grid">

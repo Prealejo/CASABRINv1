@@ -32,6 +32,7 @@ public class AppDbContext : DbContext
             e.ToTable("Usuarios");
             e.HasKey(x => x.IdUsuario);
             e.Property(x => x.NombreUsuario).HasMaxLength(60);
+            e.Property(x => x.CodigoRecuperacionHash).HasMaxLength(100);
             e.HasIndex(x => x.NombreUsuario).IsUnique();
         });
 

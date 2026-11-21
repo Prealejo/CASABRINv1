@@ -13,13 +13,28 @@ public record LoginRequest(
 public record LoginResponse(string Token, DateTime ExpiraEn, UsuarioDto Usuario);
 
 public record UsuarioDto(int IdUsuario, string NombreUsuario, string NombreCompleto,
-                         string? Correo, string Rol, bool Activo);
+                         string? Correo, string Rol, bool Activo,
+                         bool DebeCambiarContrasena = false, bool TieneCodigoRecuperacion = false);
+
+// ---------------- Recuperacion de contrasena (sin correo) ----------------
+// El usuario se identifica con su codigo de recuperacion de un solo uso.
+public record RecuperarContrasenaRequest(
+    [Required] string Usuario,
+    [Required] string CodigoRecuperacion,
+    [Required] string NuevaContrasena);
+
+// Al usar o generar un codigo se entrega uno nuevo, que se muestra una sola vez.
+public record CodigoRecuperacionResponse(string Codigo);
+
+public record CambiarMiContrasenaRequest(
+    [Required] string ContrasenaActual,
+    [Required] string NuevaContrasena);
 
 public record CrearUsuarioRequest(
     [Required, MinLength(3)] string NombreUsuario,
     [Required] string NombreCompleto,
     string? Correo,
-    [Required, MinLength(6)] string Contrasena,
+    [Required] string Contrasena,
     [Required] string Rol);
 
 public record ActualizarUsuarioRequest(
@@ -29,7 +44,7 @@ public record ActualizarUsuarioRequest(
     bool Activo);
 
 public record CambiarPasswordRequest(
-    [Required, MinLength(6)] string NuevaContrasena);
+    [Required] string NuevaContrasena);
 
 // ---------------- Catalogos ----------------
 public record TipoTelaDto(int IdTipoTela, string Nombre, bool Activo);

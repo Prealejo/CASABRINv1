@@ -13,7 +13,7 @@ import './pages.css'
 const FLUJO = [
   { to: '/ingreso', titulo: 'Recibir', Icon: PackagePlus, desc: 'Registra la tela y los rollos que llegan.' },
   { to: '/etiquetas', titulo: 'Etiquetar', Icon: Tag, desc: 'Imprime y pega el código en cada rollo.' },
-  { to: '/traslados', titulo: 'Trasladar', Icon: ArrowLeftRight, desc: 'Mueve a Local los rollos que salen a venta.' },
+  { to: '/inventario', titulo: 'Trasladar', Icon: ArrowLeftRight, desc: 'Desde Inventario, mueve a Local los rollos que salen a venta.' },
   { to: '/escanear', titulo: 'Cortar', Icon: Scissors, desc: 'Escanea el rollo y descuenta los metros vendidos.' },
   { to: '/reportes', titulo: 'Revisar', Icon: ClipboardList, desc: 'Consulta el historial y exporta el reporte.' },
 ]
