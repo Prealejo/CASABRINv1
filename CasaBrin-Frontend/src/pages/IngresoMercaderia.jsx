@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api/client.js'
 import BarcodeLabel from '../components/BarcodeLabel.jsx'
 import {
-  Layers, Cylinder, Plus, TriangleAlert, Palette, Shapes, Truck, Ruler, Hash, MapPin,
-  Trash2, StickyNote, ClipboardCheck, PackageCheck, Tag, Printer,
+  Layers, Cylinder, Plus, TriangleAlert, Palette, Shapes, Ruler, MapPin,
+  Trash2, StickyNote, ClipboardCheck, PackageCheck, Tag, Printer, ArrowLeftRight, ClipboardList, SwatchBook,
 } from 'lucide-react'
 import { fmtMetros } from '../lib/format.js'
 import Campo from '../components/Campo.jsx'
+import TelaPicker from '../components/TelaPicker.jsx'
+import ProveedorCampo from '../components/ProveedorCampo.jsx'
+import Stepper from '../components/Stepper.jsx'
 import { ICONO, ICONO_SM, Mensaje } from '../components/ui.jsx'
 import './pages.css'
 
@@ -20,10 +24,8 @@ export default function IngresoMercaderia() {
 
   const [idTela, setIdTela] = useState('')
   const [nueva, setNueva] = useState({
-    nombre: '', color: '', diseno: '', idProveedor: '', stockMinimo: '20',
+    nombre: '', codigoColor: '', color: '', diseno: '', idProveedor: '', stockMinimo: '20',
   })
-  const [nuevoProveedor, setNuevoProveedor] = useState('')
-  const [agregandoProv, setAgregandoProv] = useState(false)
 
   const [lineas, setLineas] = useState([{ ...LINEA_VACIA }])
   const [observacion, setObservacion] = useState('')
@@ -86,31 +88,6 @@ export default function IngresoMercaderia() {
     setLineas((ls) => (ls.length === 1 ? ls : ls.filter((_, idx) => idx !== i)))
   }
 
-  // ---------- proveedor: crear por texto y que aparezca en el combo ----------
-  async function agregarProveedor() {
-    const nombre = nuevoProveedor.trim()
-    if (!nombre) { setErrores((e) => ({ ...e, nuevoProveedor: 'Escribe el nombre del proveedor.' })); return }
-    // Si ya existe en la lista, solo lo selecciona.
-    const existe = proveedores.find((p) => p.nombre.toLowerCase() === nombre.toLowerCase())
-    if (existe) {
-      setNueva((n) => ({ ...n, idProveedor: String(existe.idProveedor) }))
-      setNuevoProveedor('')
-      return
-    }
-    setAgregandoProv(true)
-    setErrores((e) => { const n = { ...e }; delete n.nuevoProveedor; return n })
-    try {
-      const { data } = await api.post('/catalogos/proveedores', { nombre })
-      setProveedores((ps) => [...ps, data].sort((a, b) => a.nombre.localeCompare(b.nombre)))
-      setNueva((n) => ({ ...n, idProveedor: String(data.idProveedor) }))
-      setNuevoProveedor('')
-    } catch (e) {
-      setErrores((er) => ({ ...er, nuevoProveedor: e.message }))
-    } finally {
-      setAgregandoProv(false)
-    }
-  }
-
   // ---------- validación completa ----------
   function validar() {
     const errs = {}
@@ -122,6 +99,7 @@ export default function IngresoMercaderia() {
       if (!nueva.nombre.trim()) errs.nombre = 'El nombre de la tela es obligatorio.'
       else if (nueva.nombre.trim().length < 2) errs.nombre = 'El nombre es demasiado corto.'
       const sm = parseInt(nueva.stockMinimo, 10)
+      if (nueva.codigoColor.trim().length > 30) errs.codigoColor = 'Máximo 30 caracteres.'
       if (nueva.stockMinimo === '' || isNaN(sm)) errs.stockMinimo = 'Indica el mínimo en metros.'
       else if (sm < 1) errs.stockMinimo = 'El stock mínimo debe ser 1 o mayor.'
     }
@@ -149,6 +127,7 @@ export default function IngresoMercaderia() {
       tela: modo === 'nueva' ? {
         nombre: nueva.nombre.trim(),
         color: nueva.color.trim() || null,
+        codigoColor: nueva.codigoColor.trim() || null,
         diseno: nueva.diseno.trim() || null,
         idProveedor: nueva.idProveedor ? Number(nueva.idProveedor) : null,
         stockMinimo: parseInt(nueva.stockMinimo, 10),
@@ -171,7 +150,7 @@ export default function IngresoMercaderia() {
       if (modo === 'nueva') {
         setModo('existente')
         setIdTela(String(data.idTela))
-        setNueva({ nombre: '', color: '', diseno: '', idProveedor: '', stockMinimo: '20' })
+        setNueva({ nombre: '', codigoColor: '', color: '', diseno: '', idProveedor: '', stockMinimo: '20' })
       }
     } catch (e) {
       setError(e.message)
@@ -209,30 +188,30 @@ export default function IngresoMercaderia() {
         </div>
 
         {modo === 'existente' ? (
-          <Campo label="Tela" icon={Cylinder} requerido error={errores.idTela} style={{ marginBottom: 0 }}>
-            <select value={idTela} onChange={(e) => { setIdTela(e.target.value); limpiarError('idTela') }}>
-              <option value="">— Selecciona una tela —</option>
-              {telas.map((t) => (
-                <option key={t.idTela} value={t.idTela}>
-                  {t.codigo} · {t.nombre}{t.color ? ` (${t.color})` : ''}
-                </option>
-              ))}
-            </select>
+          <Campo label="Tela" requerido error={errores.idTela} style={{ marginBottom: 0 }}>
+            <TelaPicker telas={telas} value={idTela} onChange={(v) => { setIdTela(v); limpiarError('idTela') }} />
           </Campo>
         ) : (
           <>
             <div className="fila">
-              <Campo label="Nombre de la tela" icon={Layers} requerido error={errores.nombre}>
-                <input value={nueva.nombre} onChange={(e) => { setNueva({ ...nueva, nombre: e.target.value }); limpiarError('nombre') }} placeholder="Ej. Lino premium" />
+              <Campo label="Nombre de la tela" icon={Layers} requerido error={errores.nombre} style={{ flex: 2 }}>
+                <input value={nueva.nombre} onChange={(e) => { setNueva({ ...nueva, nombre: e.target.value }); limpiarError('nombre') }} placeholder="Ej. Satin" />
               </Campo>
               <Campo
-                label="Stock mínimo de alerta (metros)"
-                icon={TriangleAlert}
-                requerido
-                error={errores.stockMinimo}
-                ayuda="Cuando a esta tela le queden estos metros o menos (sumando todos sus rollos), el sistema la marca en alerta."
+                label="Código de color"
+                icon={SwatchBook}
+                error={errores.codigoColor}
+                ayuda="El código que trae el proveedor. Se guarda en mayúsculas."
               >
-                <input type="number" min="1" step="1" value={nueva.stockMinimo} onChange={(e) => { setNueva({ ...nueva, stockMinimo: e.target.value }); limpiarError('stockMinimo') }} placeholder="20" />
+                <input
+                  className="mono"
+                  value={nueva.codigoColor}
+                  maxLength={30}
+                  onChange={(e) => { setNueva({ ...nueva, codigoColor: e.target.value.toUpperCase() }); limpiarError('codigoColor') }}
+                  placeholder="Ej. AZ-210"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
               </Campo>
             </div>
 
@@ -245,26 +224,23 @@ export default function IngresoMercaderia() {
               </Campo>
             </div>
 
-            {/* Proveedor: se escribe y con "Agregar" queda en el combo y seleccionado */}
-            <Campo label="Proveedor" icon={Truck} style={{ marginBottom: '0.75rem' }}>
-              <select value={nueva.idProveedor} onChange={(e) => setNueva({ ...nueva, idProveedor: e.target.value })}>
-                <option value="">— Sin proveedor —</option>
-                {proveedores.map((p) => <option key={p.idProveedor} value={p.idProveedor}>{p.nombre}</option>)}
-              </select>
-            </Campo>
             <div className="fila" style={{ alignItems: 'flex-start' }}>
-              <Campo label="¿No está en la lista? Escríbelo y agrégalo" icon={Truck} error={errores.nuevoProveedor} style={{ marginBottom: 0 }}>
-                <input
-                  value={nuevoProveedor}
-                  onChange={(e) => { setNuevoProveedor(e.target.value); limpiarError('nuevoProveedor') }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); agregarProveedor() } }}
-                  placeholder="Nombre del nuevo proveedor"
-                />
+              <ProveedorCampo
+                style={{ flex: 2 }}
+                proveedores={proveedores}
+                value={nueva.idProveedor}
+                onChange={(v) => setNueva((n) => ({ ...n, idProveedor: v }))}
+                onCreado={(p) => setProveedores((ps) => [...ps, p].sort((x, y) => x.nombre.localeCompare(y.nombre)))}
+              />
+              <Campo
+                label="Stock mínimo de alerta (m)"
+                icon={TriangleAlert}
+                requerido
+                error={errores.stockMinimo}
+                ayuda="Avisa cuando la tela baje de estos metros."
+              >
+                <input type="number" min="1" step="1" value={nueva.stockMinimo} onChange={(e) => { setNueva({ ...nueva, stockMinimo: e.target.value }); limpiarError('stockMinimo') }} placeholder="20" />
               </Campo>
-              <button type="button" className="btn btn-secondary btn-alinear-campo" onClick={agregarProveedor} disabled={agregandoProv}>
-                <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
-                {agregandoProv ? 'Agregando…' : 'Agregar'}
-              </button>
             </div>
           </>
         )}
@@ -288,8 +264,8 @@ export default function IngresoMercaderia() {
             <Campo label="Metros por rollo" icon={Ruler} requerido error={errLinea(i, 'metros')}>
               <input type="number" min="0.01" step="0.01" value={l.metros} onChange={(e) => setLinea(i, 'metros', e.target.value)} placeholder="Ej. 40" />
             </Campo>
-            <Campo label="Piezas (rollos)" icon={Hash} requerido error={errLinea(i, 'cantidad')}>
-              <input type="number" min="1" step="1" value={l.cantidad} onChange={(e) => setLinea(i, 'cantidad', e.target.value)} placeholder="1" />
+            <Campo label="Piezas (rollos)" requerido error={errLinea(i, 'cantidad')}>
+              <Stepper value={l.cantidad} onChange={(v) => setLinea(i, 'cantidad', v)} min={1} max={500} etiqueta="una pieza" />
             </Campo>
             <Campo label="Ubicación" icon={MapPin} requerido error={errLinea(i, 'idUbicacion')} className="campo-ubic">
               <select value={l.idUbicacion} onChange={(e) => setLinea(i, 'idUbicacion', e.target.value)}>
@@ -348,6 +324,13 @@ export default function IngresoMercaderia() {
             Se registraron {resultado.rollosCreados.length} rollos de <strong>{resultado.telaNombre}</strong>.
             Imprime las etiquetas y pégalas en cada rollo.
           </Mensaje>
+          <div className="siguiente-paso no-print mb">
+            <span className="siguiente-paso-texto"><Tag {...ICONO_SM} aria-hidden="true" />Siguiente paso: etiquetar los rollos y, si van a venta, trasladarlos al local.</span>
+            <div className="siguiente-paso-acciones">
+              <Link to="/traslados" className="btn btn-secondary btn-sm"><ArrowLeftRight size={14} strokeWidth={2} aria-hidden="true" />Ir a Traslados</Link>
+              <Link to={`/reportes?tela=${resultado.idTela}&tipo=Ingreso`} className="btn btn-ghost btn-sm"><ClipboardList size={14} strokeWidth={2} aria-hidden="true" />Ver ingresos de esta tela</Link>
+            </div>
+          </div>
           <div className="seccion-titulo">
             <span className="titulo-icono"><Tag {...ICONO} aria-hidden="true" />Etiquetas generadas</span>
             <button type="button" className="btn btn-primary btn-sm no-print" onClick={() => window.print()}>
@@ -360,7 +343,7 @@ export default function IngresoMercaderia() {
                 key={r.idRollo}
                 codigo={r.codigoBarras}
                 titulo={r.telaNombre}
-                subtitulo={`${r.ubicacion} · ${fmtMetros(r.metrosActuales)}`}
+                subtitulo={`${r.codigoColor ? `Color ${r.codigoColor} · ` : ''}${r.ubicacion} · ${fmtMetros(r.metrosActuales)}`}
               />
             ))}
           </div>

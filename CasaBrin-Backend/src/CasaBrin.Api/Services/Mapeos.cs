@@ -5,6 +5,12 @@ namespace CasaBrin.Api.Services;
 
 public static class Mapeos
 {
+    /// <summary>Limpia un texto opcional: recorta espacios y devuelve null si queda vacio.</summary>
+    public static string? Limpio(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    /// <summary>Codigo de color normalizado: sin espacios extremos y en mayusculas (AZ-210).</summary>
+    public static string? CodigoColor(string? s) => Limpio(s)?.ToUpperInvariant();
+
     // Requiere que el Rollo tenga cargadas las navegaciones Tela y Ubicacion.
     public static RolloDto Rollo(Rollo r)
     {
@@ -24,11 +30,13 @@ public static class Mapeos
             Math.Round(r.MetrosActuales * precio, 2),
             r.Estado,
             r.FechaIngreso,
-            r.Observacion);
+            r.Observacion,
+            r.Tela?.CodigoColor,
+            r.Tela?.Proveedor?.Nombre);
     }
 
-    public static TelaDto TelaDesdeVista(StockTelaView s, int? idProveedor, string? proveedor) =>
-        new(s.IdTela, s.Codigo, s.Nombre, s.IdTipoTela, s.TipoTela, s.Color, s.Diseno,
+    public static TelaDto TelaDesdeVista(StockTelaView s, int? idProveedor, string? proveedor, string? codigoColor) =>
+        new(s.IdTela, s.Codigo, s.Nombre, s.IdTipoTela, s.TipoTela, s.Color, codigoColor, s.Diseno,
             idProveedor, proveedor, s.PrecioMetro, s.StockMinimo, s.Activo,
             s.MetrosTotales, s.RollosDisponibles, s.MetrosBodega, s.MetrosLocal, s.BajoStock);
 

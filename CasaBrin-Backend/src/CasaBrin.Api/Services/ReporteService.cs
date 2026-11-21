@@ -9,7 +9,31 @@ public interface IReporteService
     Task<DashboardDto> DashboardAsync();
     Task<List<AlertaStockDto>> ListarAlertasAsync();
     Task<PagedResult<MovimientoDto>> ListarMovimientosAsync(
-        string? tipo, int? idTela, int? idRollo, DateTime? desde, DateTime? hasta, int page, int pageSize);
+        string? tipo, int? idTela, int? idRollo, DateTime? desde, DateTime? hasta, int page, int pageSize,
+        bool ascendente = false);
+    Task<ResumenMovimientosDto> ResumenMovimientosAsync(
+        string? tipo, int? idTela, int? idRollo, DateTime? desde, DateTime? hasta);
+}
+
+/// <summary>Normaliza los limites de fecha de los filtros de reportes.</summary>
+public static class RangoFechas
+{
+    /// <summary>
+    /// Los movimientos se guardan en UTC. Si la fecha llega con zona (Local/Utc) se pasa a UTC.
+    /// Si llega sin zona y sin hora (solo fecha, p. ej. "2026-11-20") y es el limite "hasta",
+    /// se toma el dia completo para no excluir los movimientos de ese dia.
+    /// </summary>
+    public static (DateTime? desde, DateTime? hasta) Normalizar(DateTime? desde, DateTime? hasta)
+    {
+        static DateTime? AUtc(DateTime? d) => d is null ? null
+            : d.Value.Kind == DateTimeKind.Unspecified ? d : d.Value.ToUniversalTime();
+
+        var h = hasta;
+        if (h is not null && h.Value.Kind == DateTimeKind.Unspecified && h.Value.TimeOfDay == TimeSpan.Zero)
+            h = h.Value.AddDays(1).AddTicks(-1);
+
+        return (AUtc(desde), AUtc(h));
+    }
 }
 
 public class ReporteService : IReporteService
@@ -56,10 +80,48 @@ public class ReporteService : IReporteService
 
     // Historial de movimientos con filtros y paginacion (RF-14).
     public async Task<PagedResult<MovimientoDto>> ListarMovimientosAsync(
-        string? tipo, int? idTela, int? idRollo, DateTime? desde, DateTime? hasta, int page, int pageSize)
+        string? tipo, int? idTela, int? idRollo, DateTime? desde, DateTime? hasta, int page, int pageSize,
+        bool ascendente = false)
     {
         if (page < 1) page = 1;
         if (pageSize < 1 || pageSize > 200) pageSize = 50;
+
+        var q = Filtrar(tipo, idTela, idRollo, desde, hasta);
+
+        var total = await q.CountAsync();
+        // Ascendente = orden cronologico (trazabilidad de un rollo: ingreso -> traslados -> cortes).
+        var ordenado = ascendente
+            ? q.OrderBy(m => m.FechaMovimiento).ThenBy(m => m.IdMovimiento)
+            : q.OrderByDescending(m => m.FechaMovimiento).ThenByDescending(m => m.IdMovimiento);
+        var items = await ordenado
+            .Skip((page - 1) * pageSize).Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResult<MovimientoDto>(
+            items.Select(Mapeos.Movimiento).ToList(), total, page, pageSize);
+    }
+
+    // Totales por tipo de movimiento con los mismos filtros del historial.
+    public async Task<ResumenMovimientosDto> ResumenMovimientosAsync(
+        string? tipo, int? idTela, int? idRollo, DateTime? desde, DateTime? hasta)
+    {
+        var grupos = await Filtrar(tipo, idTela, idRollo, desde, hasta)
+            .GroupBy(m => m.TipoMovimiento)
+            .Select(g => new { Tipo = g.Key, Cantidad = g.Count(), Metros = g.Sum(m => m.Metros) })
+            .ToListAsync();
+
+        var porTipo = grupos
+            .Select(g => new ResumenTipoDto(g.Tipo, g.Cantidad, g.Metros))
+            .OrderBy(g => g.Tipo)
+            .ToList();
+
+        return new ResumenMovimientosDto(porTipo.Sum(g => g.Cantidad), porTipo);
+    }
+
+    private IQueryable<Entities.MovimientoDetalleView> Filtrar(
+        string? tipo, int? idTela, int? idRollo, DateTime? desde, DateTime? hasta)
+    {
+        (desde, hasta) = RangoFechas.Normalizar(desde, hasta);
 
         var q = _db.MovimientosDetalle.AsQueryable();
         if (!string.IsNullOrWhiteSpace(tipo)) q = q.Where(m => m.TipoMovimiento == tipo);
@@ -67,14 +129,6 @@ public class ReporteService : IReporteService
         if (idRollo is not null) q = q.Where(m => m.IdRollo == idRollo);
         if (desde is not null) q = q.Where(m => m.FechaMovimiento >= desde);
         if (hasta is not null) q = q.Where(m => m.FechaMovimiento <= hasta);
-
-        var total = await q.CountAsync();
-        var items = await q
-            .OrderByDescending(m => m.FechaMovimiento).ThenByDescending(m => m.IdMovimiento)
-            .Skip((page - 1) * pageSize).Take(pageSize)
-            .ToListAsync();
-
-        return new PagedResult<MovimientoDto>(
-            items.Select(Mapeos.Movimiento).ToList(), total, page, pageSize);
+        return q;
     }
 }

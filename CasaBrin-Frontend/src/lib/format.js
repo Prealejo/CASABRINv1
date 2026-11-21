@@ -25,10 +25,27 @@ export function fmtNum(v) {
   return (Number(v) || 0).toLocaleString('es-EC')
 }
 
+// El backend guarda las fechas en UTC y las envía sin zona ("2026-11-20T14:05:00").
+// Sin la "Z", el navegador las tomaría como hora local y mostraría la hora corrida.
+export function parseFecha(iso) {
+  if (!iso) return null
+  if (iso instanceof Date) return iso
+  const s = String(iso)
+  const tieneZona = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)
+  return new Date(s.includes('T') && !tieneZona ? `${s}Z` : s)
+}
+
+// Convierte un rango de fechas locales (input type="date") a límites UTC de día completo.
+export function rangoUtc(desde, hasta) {
+  const inicio = desde ? new Date(`${desde}T00:00:00`).toISOString() : undefined
+  const fin = hasta ? new Date(`${hasta}T23:59:59.999`).toISOString() : undefined
+  return { desde: inicio, hasta: fin }
+}
+
 // Fecha y hora legible.
 export function fmtFecha(iso) {
   if (!iso) return '—'
-  const d = new Date(iso)
+  const d = parseFecha(iso)
   if (isNaN(d)) return '—'
   return d.toLocaleString('es-EC', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -39,7 +56,7 @@ export function fmtFecha(iso) {
 // Solo fecha.
 export function fmtSoloFecha(iso) {
   if (!iso) return '—'
-  const d = new Date(iso)
+  const d = parseFecha(iso)
   if (isNaN(d)) return '—'
   return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }

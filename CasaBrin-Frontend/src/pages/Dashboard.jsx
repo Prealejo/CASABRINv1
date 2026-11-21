@@ -2,11 +2,21 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Layers, Cylinder, Ruler, TriangleAlert, PackagePlus, History, Warehouse, Store, ArrowRight, ClipboardList,
+  Tag, ArrowLeftRight, Scissors, Workflow,
 } from 'lucide-react'
 import { api } from '../api/client.js'
 import { fmtMetros, fmtNum, fmtFecha } from '../lib/format.js'
 import { ICONO, ICONO_SM, TipoMovimiento, Vacio, Cargando, Mensaje } from '../components/ui.jsx'
 import './pages.css'
+
+// Orden recomendado del proceso: cada paso deja registro y alimenta al siguiente.
+const FLUJO = [
+  { to: '/ingreso', titulo: 'Recibir', Icon: PackagePlus, desc: 'Registra la tela y los rollos que llegan.' },
+  { to: '/etiquetas', titulo: 'Etiquetar', Icon: Tag, desc: 'Imprime y pega el código en cada rollo.' },
+  { to: '/traslados', titulo: 'Trasladar', Icon: ArrowLeftRight, desc: 'Mueve a Local los rollos que salen a venta.' },
+  { to: '/escanear', titulo: 'Cortar', Icon: Scissors, desc: 'Escanea el rollo y descuenta los metros vendidos.' },
+  { to: '/reportes', titulo: 'Revisar', Icon: ClipboardList, desc: 'Consulta el historial y exporta el reporte.' },
+]
 
 function Stat({ label, valor, Icon, className = '', children }) {
   return (
@@ -89,6 +99,23 @@ export default function Dashboard() {
 
       <div className="seccion">
         <div className="seccion-titulo">
+          <span className="titulo-icono"><Workflow {...ICONO} aria-hidden="true" />Proceso de un rollo</span>
+        </div>
+        <ol className="flujo" style={{ listStyle: 'none' }}>
+          {FLUJO.map(({ to, titulo, Icon, desc }, i) => (
+            <li key={to} style={{ display: 'contents' }}>
+              <Link to={to} className="flujo-paso">
+                <span className="flujo-num" aria-hidden="true">{i + 1}</span>
+                <span className="flujo-titulo"><Icon size={16} strokeWidth={1.75} aria-hidden="true" />{titulo}</span>
+                <span className="flujo-desc">{desc}</span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="seccion">
+        <div className="seccion-titulo">
           <span className="titulo-icono"><History {...ICONO} aria-hidden="true" />Últimos movimientos</span>
           <Link to="/reportes" className="btn btn-ghost btn-sm">
             <ClipboardList size={16} strokeWidth={1.75} aria-hidden="true" />
@@ -117,7 +144,15 @@ export default function Dashboard() {
                       <td className="nowrap">{fmtFecha(m.fecha)}</td>
                       <td><TipoMovimiento tipo={m.tipo} /></td>
                       <td>{m.tela}</td>
-                      <td className="mono">{m.codigoBarras}</td>
+                      <td>
+                        <Link
+                          to={`/reportes?rollo=${encodeURIComponent(m.codigoBarras)}`}
+                          className="mono"
+                          title="Ver trazabilidad del rollo"
+                        >
+                          {m.codigoBarras}
+                        </Link>
+                      </td>
                       <td className="mono num">{fmtMetros(m.metros)}</td>
                       <td>{m.usuario}</td>
                     </tr>

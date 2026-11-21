@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client.js'
 import BarcodeInput from '../components/BarcodeInput.jsx'
 import {
-  Cylinder, Barcode, MapPin, MapPinned, Ruler, ArrowLeftRight, ArrowRight, StickyNote,
+  Cylinder, Barcode, MapPin, MapPinned, Ruler, ArrowLeftRight, ArrowRight, StickyNote, Route, Scissors, SwatchBook,
 } from 'lucide-react'
 import { fmtMetros } from '../lib/format.js'
 import Campo from '../components/Campo.jsx'
-import { ICONO, ICONO_SM, EstadoBadge, UbicacionBadge, Mensaje } from '../components/ui.jsx'
+import { ICONO, ICONO_SM, EstadoBadge, UbicacionBadge, CodigoColorBadge, ProveedorTexto, Mensaje } from '../components/ui.jsx'
 import './pages.css'
 
 export default function Traslados() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [rollo, setRollo] = useState(null)
   const [ubicaciones, setUbicaciones] = useState([])
   const [destino, setDestino] = useState('')
@@ -47,6 +49,25 @@ export default function Traslados() {
       setBuscando(false)
     }
   }
+
+  // Si se llega desde Inventario (?codigo=CB…), se carga el rollo directamente.
+  useEffect(() => {
+    const cod = searchParams.get('codigo')
+    if (cod) {
+      buscar(cod)
+      setSearchParams({}, { replace: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Con solo dos ubicaciones (Bodega/Local), el destino es obvio: se preselecciona.
+  useEffect(() => {
+    if (!rollo || rollo.estado === 'Anulado') return
+    const opciones = ubicaciones.filter((u) => u.idUbicacion !== rollo.idUbicacion)
+    if (opciones.length === 1) setDestino(String(opciones[0].idUbicacion))
+  // Solo al cargar un rollo distinto (no después de confirmar un traslado).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rollo?.idRollo, ubicaciones.length])
 
   async function trasladar() {
     if (!rollo || !destino) return
@@ -91,7 +112,17 @@ export default function Traslados() {
       </div>
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}
-      {ok && <Mensaje tipo="ok">{ok}</Mensaje>}
+      {ok && (
+        <>
+          <Mensaje tipo="ok">{ok}</Mensaje>
+          <div className="siguiente-paso mb">
+            <span className="siguiente-paso-texto"><Scissors {...ICONO_SM} aria-hidden="true" />Siguiente paso: cortar los metros que se vendan.</span>
+            <div className="siguiente-paso-acciones">
+              <Link to="/escanear" className="btn btn-primary btn-sm"><Scissors size={14} strokeWidth={2} aria-hidden="true" />Ir a Escanear / Cortar</Link>
+            </div>
+          </div>
+        </>
+      )}
 
       {rollo && (
         <div className="escaner-grid">
@@ -104,6 +135,15 @@ export default function Traslados() {
               {rollo.telaNombre}{rollo.color ? ` · ${rollo.color}` : ''}
             </div>
             <div className="rollo-codigo mono"><Barcode {...ICONO_SM} aria-hidden="true" />{rollo.codigoBarras}</div>
+            {(rollo.codigoColor || rollo.proveedor) && (
+              <div className="dato-fila">
+                <span className="dato-label"><SwatchBook {...ICONO_SM} aria-hidden="true" />Código de color · proveedor</span>
+                <span className="dato-valor chips" style={{ justifyContent: 'flex-end' }}>
+                  <CodigoColorBadge codigo={rollo.codigoColor} />
+                  <ProveedorTexto nombre={rollo.proveedor} />
+                </span>
+              </div>
+            )}
             <div className="dato-fila">
               <span className="dato-label"><MapPin {...ICONO_SM} aria-hidden="true" />Ubicación actual</span>
               <span className="dato-valor"><UbicacionBadge nombre={rollo.ubicacion} /></span>
@@ -112,6 +152,9 @@ export default function Traslados() {
               <span className="dato-label"><Ruler {...ICONO_SM} aria-hidden="true" />Metros disponibles</span>
               <span className="dato-valor grande mono">{fmtMetros(rollo.metrosActuales)}</span>
             </div>
+            <Link to={`/reportes?rollo=${encodeURIComponent(rollo.codigoBarras)}`} className="btn btn-ghost btn-sm" style={{ marginTop: '0.75rem' }}>
+              <Route size={14} strokeWidth={2} aria-hidden="true" />Ver trazabilidad del rollo
+            </Link>
           </div>
 
           <div className="card">

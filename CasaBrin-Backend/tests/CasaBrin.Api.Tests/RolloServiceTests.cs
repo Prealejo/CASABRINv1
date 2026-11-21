@@ -172,7 +172,7 @@ public class RolloServiceTests
 
         var req = new IngresoMercaderiaRequest(
             IdTela: null,
-            Tela: new NuevaTela("Lino Crudo", TestDb.TipoTelaId, "Crudo", null, null, 12m, 30m),
+            Tela: new NuevaTela("Lino Crudo", "Crudo", null, null, 30m),
             Lineas: new List<LineaIngreso> { new(80m, 2, TestDb.BodegaId) },
             Observacion: null);
 

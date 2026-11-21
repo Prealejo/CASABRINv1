@@ -1,13 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client.js'
 import BarcodeInput from '../components/BarcodeInput.jsx'
-import { Cylinder, Barcode, MapPin, Ruler, Scissors, StickyNote } from 'lucide-react'
+import { Cylinder, Barcode, MapPin, Ruler, Scissors, StickyNote, Route, SwatchBook } from 'lucide-react'
 import { fmtMetros } from '../lib/format.js'
 import Campo from '../components/Campo.jsx'
-import { ICONO, ICONO_SM, EstadoBadge, UbicacionBadge, Mensaje } from '../components/ui.jsx'
+import { ICONO, ICONO_SM, EstadoBadge, UbicacionBadge, CodigoColorBadge, ProveedorTexto, Mensaje } from '../components/ui.jsx'
+
+const CORTES_RAPIDOS = [0.5, 1, 2, 3, 5, 10]
 import './pages.css'
 
 export default function Escanear() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [rollo, setRollo] = useState(null)
   const [metros, setMetros] = useState('')
   const [observacion, setObservacion] = useState('')
@@ -48,6 +52,16 @@ export default function Escanear() {
       setBuscando(false)
     }
   }
+
+  // Si se llega desde Inventario (?codigo=CB…), se carga el rollo directamente.
+  useEffect(() => {
+    const cod = searchParams.get('codigo')
+    if (cod) {
+      buscar(cod)
+      setSearchParams({}, { replace: true })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const metrosNum = parseFloat(metros) || 0
   const excede = rollo && metrosNum > Number(rollo.metrosActuales)
@@ -112,6 +126,15 @@ export default function Escanear() {
             </div>
             <div className="rollo-codigo mono"><Barcode {...ICONO_SM} aria-hidden="true" />{rollo.codigoBarras}</div>
 
+            {(rollo.codigoColor || rollo.proveedor) && (
+              <div className="dato-fila">
+                <span className="dato-label"><SwatchBook {...ICONO_SM} aria-hidden="true" />Código de color · proveedor</span>
+                <span className="dato-valor chips" style={{ justifyContent: 'flex-end' }}>
+                  <CodigoColorBadge codigo={rollo.codigoColor} />
+                  <ProveedorTexto nombre={rollo.proveedor} />
+                </span>
+              </div>
+            )}
             <div className="dato-fila">
               <span className="dato-label"><MapPin {...ICONO_SM} aria-hidden="true" />Ubicación</span>
               <span className="dato-valor"><UbicacionBadge nombre={rollo.ubicacion} /></span>
@@ -124,6 +147,9 @@ export default function Escanear() {
               <span className="dato-label"><Ruler {...ICONO_SM} aria-hidden="true" />Metros iniciales</span>
               <span className="dato-valor mono">{fmtMetros(rollo.metrosIniciales)}</span>
             </div>
+            <Link to={`/reportes?rollo=${encodeURIComponent(rollo.codigoBarras)}`} className="btn btn-ghost btn-sm" style={{ marginTop: '0.75rem' }}>
+              <Route size={14} strokeWidth={2} aria-hidden="true" />Ver trazabilidad del rollo
+            </Link>
           </div>
 
           {/* --------- Panel de corte --------- */}
@@ -149,6 +175,30 @@ export default function Escanear() {
               />
             </Campo>
 
+            {rollo.estado === 'Disponible' && (
+              <div className="cortes-rapidos" role="group" aria-label="Metros rápidos">
+                {CORTES_RAPIDOS.filter((m) => m <= Number(rollo.metrosActuales)).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`chip-btn ${metrosNum === m ? 'activo' : ''}`}
+                    onClick={() => setMetros(String(m))}
+                    aria-pressed={metrosNum === m}
+                  >
+                    {fmtMetros(m)}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={`chip-btn ${metrosNum === Number(rollo.metrosActuales) ? 'activo' : ''}`}
+                  onClick={() => setMetros(String(Number(rollo.metrosActuales)))}
+                  aria-pressed={metrosNum === Number(rollo.metrosActuales)}
+                >
+                  Todo ({fmtMetros(rollo.metrosActuales)})
+                </button>
+              </div>
+            )}
+
             <Campo label="Observación (opcional)" icon={StickyNote}>
               <input
                 value={observacion}
@@ -158,6 +208,15 @@ export default function Escanear() {
               />
             </Campo>
 
+            {metrosNum > 0 && !excede && (
+              <div className="previa-corte" aria-live="polite">
+                <span>{fmtMetros(rollo.metrosActuales)}</span>
+                <span className="tenue">−</span>
+                <strong>{fmtMetros(metrosNum)}</strong>
+                <span className="tenue">=</span>
+                <span>quedan <strong>{fmtMetros(Number(rollo.metrosActuales) - metrosNum)}</strong></span>
+              </div>
+            )}
             <button type="button" className="btn btn-primary btn-block" onClick={cortar} disabled={!puedeCortar || cortando}>
               <Scissors {...ICONO} aria-hidden="true" />
               {cortando ? 'Registrando corte…' : (metrosNum > 0 ? `Cortar ${fmtMetros(metrosNum)}` : 'Cortar')}
@@ -170,6 +229,7 @@ export default function Escanear() {
         <Mensaje tipo="ok" style={{ marginTop: '1.25rem' }}>
           Corte registrado: se sacaron <strong>{fmtMetros(resultado.metrosAntes - resultado.metrosDespues)}</strong>.
           Quedan {fmtMetros(resultado.metrosDespues)} en el rollo{resultado.estado === 'Agotado' ? ' (ahora AGOTADO)' : ''}.
+          {' '}El corte quedó registrado en <Link to={`/reportes?rollo=${encodeURIComponent(rollo?.codigoBarras || '')}`}>el historial del rollo</Link>.
         </Mensaje>
       )}
     </div>

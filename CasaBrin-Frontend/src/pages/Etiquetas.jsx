@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api/client.js'
 import BarcodeLabel from '../components/BarcodeLabel.jsx'
-import { Printer, Cylinder, MapPin, CircleDot, Filter, Tag, Barcode } from 'lucide-react'
+import { Printer, Cylinder, MapPin, CircleDot, Filter, Tag, Barcode, ArrowLeftRight } from 'lucide-react'
 import { fmtMetros } from '../lib/format.js'
 import Campo from '../components/Campo.jsx'
 import { ICONO, ICONO_SM, Vacio, Cargando, Mensaje } from '../components/ui.jsx'
@@ -70,7 +71,7 @@ export default function Etiquetas() {
           <Campo label="Tela" icon={Cylinder}>
             <select value={filtros.idTela} onChange={(e) => setFiltros({ ...filtros, idTela: e.target.value })}>
               <option value="">Todas</option>
-              {telas.map((t) => <option key={t.idTela} value={t.idTela}>{t.codigo} · {t.nombre}</option>)}
+              {telas.map((t) => <option key={t.idTela} value={t.idTela}>{t.codigo} · {t.nombre}{t.codigoColor ? ` · ${t.codigoColor}` : ''}</option>)}
             </select>
           </Campo>
           <Campo label="Ubicación" icon={MapPin}>
@@ -108,13 +109,19 @@ export default function Etiquetas() {
             <Barcode {...ICONO_SM} aria-hidden="true" />
             {rollos.length} etiqueta{rollos.length !== 1 ? 's' : ''} lista{rollos.length !== 1 ? 's' : ''} para imprimir.
           </p>
+          <div className="siguiente-paso no-print mb" style={{ marginTop: 0 }}>
+            <span className="siguiente-paso-texto"><ArrowLeftRight {...ICONO_SM} aria-hidden="true" />Con los rollos etiquetados, muévelos a donde se venden.</span>
+            <div className="siguiente-paso-acciones">
+              <Link to="/traslados" className="btn btn-secondary btn-sm"><ArrowLeftRight size={14} strokeWidth={2} aria-hidden="true" />Ir a Traslados</Link>
+            </div>
+          </div>
           <div className="etiquetas-grid">
             {rollos.map((r) => (
               <BarcodeLabel
                 key={r.idRollo}
                 codigo={r.codigoBarras}
                 titulo={r.telaNombre}
-                subtitulo={`${r.ubicacion} · ${fmtMetros(r.metrosActuales)}`}
+                subtitulo={`${r.codigoColor ? `Color ${r.codigoColor} · ` : ''}${r.ubicacion} · ${fmtMetros(r.metrosActuales)}`}
               />
             ))}
           </div>

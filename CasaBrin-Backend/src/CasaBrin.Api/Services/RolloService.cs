@@ -64,6 +64,21 @@ public class RolloService : IRolloService
             if (nt.IdProveedor.HasValue && !await _db.Proveedores.AnyAsync(p => p.IdProveedor == nt.IdProveedor.Value))
                 throw AppException.Validation("El proveedor indicado no existe.");
 
+            // Evita duplicar la misma tela: mismo nombre y mismo codigo de color.
+            var codigoColor = Mapeos.CodigoColor(nt.CodigoColor);
+            if (codigoColor is not null)
+            {
+                var nombreNorm = nt.Nombre.Trim().ToLower();
+                var duplicada = await _db.Telas
+                    .Where(t => t.Activo && t.CodigoColor == codigoColor && t.Nombre.ToLower() == nombreNorm)
+                    .Select(t => t.Codigo)
+                    .FirstOrDefaultAsync();
+                if (duplicada is not null)
+                    throw AppException.Conflict(
+                        $"Ya existe la tela {duplicada} con el nombre '{nt.Nombre.Trim()}' y el codigo de color {codigoColor}. " +
+                        "Elige 'Tela existente' para ingresar mas rollos.");
+            }
+
             // El tipo de tela ya no se pide en el formulario: se usa/crea uno por defecto ("General").
             var tipoGeneral = await _db.TiposTela.FirstOrDefaultAsync(t => t.Nombre == "General");
             if (tipoGeneral is null)
@@ -78,6 +93,7 @@ public class RolloService : IRolloService
                 Nombre = nt.Nombre.Trim(),
                 IdTipoTela = tipoGeneral.IdTipoTela,
                 Color = string.IsNullOrWhiteSpace(nt.Color) ? null : nt.Color.Trim(),
+                CodigoColor = codigoColor,
                 Diseno = string.IsNullOrWhiteSpace(nt.Diseno) ? null : nt.Diseno.Trim(),
                 IdProveedor = nt.IdProveedor,
                 PrecioMetro = 0m,          // el precio ya no se captura en el ingreso
@@ -139,7 +155,7 @@ public class RolloService : IRolloService
         // Recargar con navegaciones para el DTO.
         var ids = rollos.Select(r => r.IdRollo).ToList();
         var creados = await _db.Rollos.AsNoTracking()
-            .Include(r => r.Tela).Include(r => r.Ubicacion)
+            .Include(r => r.Tela).ThenInclude(t => t!.Proveedor).Include(r => r.Ubicacion)
             .Where(r => ids.Contains(r.IdRollo))
             .OrderBy(r => r.IdRollo)
             .ToListAsync();
@@ -154,7 +170,7 @@ public class RolloService : IRolloService
     {
         var cod = (codigo ?? string.Empty).Trim().ToUpperInvariant();
         var rollo = await _db.Rollos.AsNoTracking()
-            .Include(r => r.Tela).Include(r => r.Ubicacion)
+            .Include(r => r.Tela).ThenInclude(t => t!.Proveedor).Include(r => r.Ubicacion)
             .FirstOrDefaultAsync(r => r.CodigoBarras == cod)
             ?? throw AppException.NotFound($"No se encontro ningun rollo con el codigo '{cod}'.");
         return Mapeos.Rollo(rollo);
@@ -163,7 +179,7 @@ public class RolloService : IRolloService
     public async Task<RolloDto> ObtenerPorIdAsync(int id)
     {
         var rollo = await _db.Rollos.AsNoTracking()
-            .Include(r => r.Tela).Include(r => r.Ubicacion)
+            .Include(r => r.Tela).ThenInclude(t => t!.Proveedor).Include(r => r.Ubicacion)
             .FirstOrDefaultAsync(r => r.IdRollo == id)
             ?? throw AppException.NotFound("Rollo no encontrado.");
         return Mapeos.Rollo(rollo);
@@ -171,7 +187,7 @@ public class RolloService : IRolloService
 
     public async Task<List<RolloDto>> ListarAsync(int? idTela, int? idUbicacion, string? estado)
     {
-        var q = _db.Rollos.AsNoTracking().Include(r => r.Tela).Include(r => r.Ubicacion).AsQueryable();
+        var q = _db.Rollos.AsNoTracking().Include(r => r.Tela).ThenInclude(t => t!.Proveedor).Include(r => r.Ubicacion).AsQueryable();
         if (idTela is not null) q = q.Where(r => r.IdTela == idTela);
         if (idUbicacion is not null) q = q.Where(r => r.IdUbicacion == idUbicacion);
         if (!string.IsNullOrWhiteSpace(estado)) q = q.Where(r => r.Estado == estado);

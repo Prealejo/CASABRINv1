@@ -34,4 +34,12 @@ public class TelasController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<ActionResult<TelaDto>> Actualizar(int id, [FromBody] ActualizarTelaRequest req)
         => Ok(await _telas.ActualizarAsync(id, req));
+
+    // Ficha de la tela (codigo de color, proveedor, etc.) editable desde Inventario.
+    [HttpPut("{id:int}/ficha")]
+    public async Task<IActionResult> ActualizarFicha(int id, [FromBody] ActualizarFichaTelaRequest req)
+    {
+        await _telas.ActualizarFichaAsync(id, req);
+        return NoContent();
+    }
 }

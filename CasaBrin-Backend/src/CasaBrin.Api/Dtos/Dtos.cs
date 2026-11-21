@@ -44,7 +44,7 @@ public record CrearProveedorRequest([Required] string Nombre, string? Telefono,
 
 // ---------------- Telas (RF-03) ----------------
 public record TelaDto(int IdTela, string Codigo, string Nombre, int IdTipoTela, string TipoTela,
-                      string? Color, string? Diseno, int? IdProveedor, string? Proveedor,
+                      string? Color, string? CodigoColor, string? Diseno, int? IdProveedor, string? Proveedor,
                       decimal PrecioMetro, decimal StockMinimo, bool Activo,
                       decimal MetrosTotales, int RollosDisponibles,
                       decimal MetrosBodega, decimal MetrosLocal, bool BajoStock);
@@ -70,11 +70,21 @@ public record ActualizarTelaRequest(
 
 public record TelaDetalleDto(TelaDto Tela, IReadOnlyList<RolloDto> Rollos);
 
+// Edicion de la ficha de una tela desde Inventario (sin tocar tipo ni precio).
+public record ActualizarFichaTelaRequest(
+    [Required, MinLength(2)] string Nombre,
+    string? Color,
+    [MaxLength(30)] string? CodigoColor,
+    string? Diseno,
+    int? IdProveedor,
+    [Range(1, double.MaxValue, ErrorMessage = "El stock minimo debe ser 1 o mayor.")] decimal StockMinimo);
+
 // ---------------- Rollos (RF-04, RF-06, RF-11) ----------------
 public record RolloDto(int IdRollo, string CodigoBarras, int IdTela, string TelaCodigo, string TelaNombre,
                        string? Color, int IdUbicacion, string Ubicacion,
                        decimal MetrosIniciales, decimal MetrosActuales, decimal PrecioMetro,
-                       decimal ValorActual, string Estado, DateTime FechaIngreso, string? Observacion);
+                       decimal ValorActual, string Estado, DateTime FechaIngreso, string? Observacion,
+                       string? CodigoColor, string? Proveedor);
 
 // Ingreso de mercaderia: crea (o usa) una tela y varios rollos a la vez (RF-07)
 public record LineaIngreso(
@@ -87,7 +97,8 @@ public record NuevaTela(
     string? Color,
     string? Diseno,
     int? IdProveedor,
-    [Range(1, double.MaxValue, ErrorMessage = "El stock minimo debe ser 1 o mayor.")] decimal StockMinimo);
+    [Range(1, double.MaxValue, ErrorMessage = "El stock minimo debe ser 1 o mayor.")] decimal StockMinimo,
+    [MaxLength(30)] string? CodigoColor = null);
 
 public record IngresoMercaderiaRequest(
     int? IdTela,
@@ -121,6 +132,9 @@ public record MovimientoDto(long IdMovimiento, DateTime Fecha, string Tipo, int 
                             int IdTela, string CodigoTela, string Tela, decimal Metros,
                             decimal MetrosAntes, decimal MetrosDespues, decimal PrecioMetro, decimal ValorTotal,
                             string? UbicacionOrigen, string? UbicacionDestino, string Usuario, string? Observacion);
+
+public record ResumenTipoDto(string Tipo, int Cantidad, decimal Metros);
+public record ResumenMovimientosDto(int Total, IReadOnlyList<ResumenTipoDto> PorTipo);
 
 public record AlertaStockDto(int IdTela, string Codigo, string Nombre, string TipoTela,
                              decimal StockMinimo, decimal MetrosTotales, int RollosDisponibles);

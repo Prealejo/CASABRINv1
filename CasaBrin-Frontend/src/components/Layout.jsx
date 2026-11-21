@@ -9,15 +9,33 @@ import logo from '../assets/logo-casabrin-h.png'
 import { ICONO } from './ui.jsx'
 import './layout.css'
 
-const items = [
-  { to: '/', label: 'Panel', Icon: LayoutDashboard, end: true },
-  { to: '/inventario', label: 'Inventario', Icon: Warehouse },
-  { to: '/ingreso', label: 'Ingreso mercadería', Icon: PackagePlus },
-  { to: '/escanear', label: 'Escanear / Cortar', Icon: ScanBarcode },
-  { to: '/traslados', label: 'Traslados', Icon: ArrowLeftRight },
-  { to: '/etiquetas', label: 'Etiquetas', Icon: Tag },
-  { to: '/reportes', label: 'Movimientos', Icon: ClipboardList },
+// Menú ordenado según el flujo real de un rollo en Casa Brin:
+// llega (ingreso) → se etiqueta → se mueve a donde se vende → se corta → se controla y reporta.
+const grupos = [
+  { titulo: null, items: [{ to: '/', label: 'Panel', Icon: LayoutDashboard, end: true }] },
+  {
+    titulo: '1. Recepción',
+    items: [
+      { to: '/ingreso', label: 'Ingreso mercadería', Icon: PackagePlus },
+      { to: '/etiquetas', label: 'Etiquetas', Icon: Tag },
+    ],
+  },
+  {
+    titulo: '2. Operación',
+    items: [
+      { to: '/traslados', label: 'Traslados', Icon: ArrowLeftRight },
+      { to: '/escanear', label: 'Escanear / Cortar', Icon: ScanBarcode },
+    ],
+  },
+  {
+    titulo: '3. Control',
+    items: [
+      { to: '/inventario', label: 'Inventario', Icon: Warehouse },
+      { to: '/reportes', label: 'Movimientos y reporte', Icon: ClipboardList },
+    ],
+  },
 ]
+const grupoAdmin = { titulo: 'Administración', items: [{ to: '/usuarios', label: 'Usuarios', Icon: Users }] }
 
 export default function Layout() {
   const { user, esAdmin, logout } = useAuth()
@@ -29,7 +47,7 @@ export default function Layout() {
     navigate('/login')
   }
 
-  const visibles = esAdmin ? [...items, { to: '/usuarios', label: 'Usuarios', Icon: Users }] : items
+  const visibles = esAdmin ? [...grupos, grupoAdmin] : grupos
 
   return (
     <div className="layout">
@@ -42,17 +60,22 @@ export default function Layout() {
         </div>
 
         <nav className="nav">
-          {visibles.map(({ to, label, Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) => `nav-item ${isActive ? 'activo' : ''}`}
-              onClick={() => setAbierto(false)}
-            >
-              <Icon className="nav-icon" {...ICONO} aria-hidden="true" />
-              {label}
-            </NavLink>
+          {visibles.map((g, gi) => (
+            <div className="nav-grupo" key={g.titulo || gi} role="group" aria-label={g.titulo || 'Inicio'}>
+              {g.titulo && <div className="nav-grupo-titulo" aria-hidden="true">{g.titulo}</div>}
+              {g.items.map(({ to, label, Icon, end }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) => `nav-item ${isActive ? 'activo' : ''}`}
+                  onClick={() => setAbierto(false)}
+                >
+                  <Icon className="nav-icon" {...ICONO} aria-hidden="true" />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 

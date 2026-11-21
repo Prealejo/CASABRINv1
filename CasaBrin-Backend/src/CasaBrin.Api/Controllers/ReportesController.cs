@@ -32,6 +32,18 @@ public class ReportesController : ControllerBase
         [FromQuery] DateTime? desde,
         [FromQuery] DateTime? hasta,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50)
-        => Ok(await _reportes.ListarMovimientosAsync(tipo, idTela, idRollo, desde, hasta, page, pageSize));
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? orden = null)
+        => Ok(await _reportes.ListarMovimientosAsync(tipo, idTela, idRollo, desde, hasta, page, pageSize,
+            ascendente: string.Equals(orden, "asc", StringComparison.OrdinalIgnoreCase)));
+
+    // Resumen del reporte: cantidad y metros por tipo de movimiento (mismos filtros).
+    [HttpGet("movimientos/resumen")]
+    public async Task<ActionResult<ResumenMovimientosDto>> Resumen(
+        [FromQuery] string? tipo,
+        [FromQuery] int? idTela,
+        [FromQuery] int? idRollo,
+        [FromQuery] DateTime? desde,
+        [FromQuery] DateTime? hasta)
+        => Ok(await _reportes.ResumenMovimientosAsync(tipo, idTela, idRollo, desde, hasta));
 }

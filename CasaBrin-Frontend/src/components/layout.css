@@ -68,3 +68,12 @@
   .main { padding: 1.25rem 1rem; }
   .overlay { display: block; position: fixed; inset: 0; background: rgba(31, 35, 40, 0.45); z-index: 40; }
 }
+
+/* Grupos del menú por etapa del proceso */
+.nav { gap: 0; }
+.nav-grupo { display: flex; flex-direction: column; gap: 2px; }
+.nav-grupo + .nav-grupo { margin-top: 0.7rem; }
+.nav-grupo-titulo {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--gray-500); padding: 0 0.8rem 0.25rem;
+}

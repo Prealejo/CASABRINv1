@@ -1,6 +1,6 @@
 import {
   CircleCheck, CircleMinus, Ban, Warehouse, Store, MapPin, TriangleAlert, Inbox,
-  PackagePlus, Scissors, ArrowLeftRight, SlidersHorizontal, CircleAlert, Info,
+  PackagePlus, Scissors, ArrowLeftRight, SlidersHorizontal, CircleAlert, Info, SwatchBook, Truck,
 } from 'lucide-react'
 
 // Tamaño y grosor únicos para toda la familia de iconos.
@@ -33,6 +33,29 @@ export function UbicacionBadge({ nombre }) {
   return (
     <span className={`badge ${cls}`}>
       <Icon {...ICONO_SM} aria-hidden="true" />{nombre}
+    </span>
+  )
+}
+
+/* ---------- Código de color de la tela ---------- */
+export function CodigoColorBadge({ codigo, grande = false }) {
+  if (!codigo) return null
+  return (
+    <span className={`badge badge-color ${grande ? 'badge-grande' : ''}`} title="Código de color">
+      <SwatchBook {...ICONO_SM} aria-hidden="true" />
+      <span className="sr-only">Código de color </span>
+      <span className="mono">{codigo}</span>
+    </span>
+  )
+}
+
+/* ---------- Proveedor ---------- */
+export function ProveedorTexto({ nombre }) {
+  if (!nombre) return null
+  return (
+    <span className="proveedor-texto" title="Proveedor">
+      <Truck {...ICONO_SM} aria-hidden="true" />
+      <span className="sr-only">Proveedor </span>{nombre}
     </span>
   )
 }

@@ -71,6 +71,7 @@ public class AppDbContext : DbContext
                 e.Property(x => x.Codigo).HasMaxLength(20);
             e.Property(x => x.PrecioMetro).HasPrecision(12, 2);
             e.Property(x => x.StockMinimo).HasPrecision(12, 2);
+            e.Property(x => x.CodigoColor).HasMaxLength(30);
             e.HasOne(x => x.TipoTela).WithMany().HasForeignKey(x => x.IdTipoTela);
             e.HasOne(x => x.Proveedor).WithMany().HasForeignKey(x => x.IdProveedor);
         });

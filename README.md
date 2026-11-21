@@ -21,6 +21,10 @@ dotnet run
 
 Queda en http://localhost:5080 (Swagger en `/swagger`).
 
+**Migraciones de base de datos:** después del script inicial, ejecuta en orden los archivos de
+[`CasaBrin-Backend/database/`](CasaBrin-Backend/database/) (por ejemplo `001_codigo_color.sql`).
+Son idempotentes: se pueden ejecutar más de una vez sin problema.
+
 ### 2. Frontend
 ```bash
 cd CasaBrin-Frontend

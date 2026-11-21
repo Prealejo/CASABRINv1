@@ -49,6 +49,7 @@ public class Tela
     public string Nombre { get; set; } = string.Empty;
     public int IdTipoTela { get; set; }
     public string? Color { get; set; }
+    public string? CodigoColor { get; set; }                  // codigo de color del proveedor (p. ej. "AZ-210")
     public string? Diseno { get; set; }
     public int? IdProveedor { get; set; }
     public decimal PrecioMetro { get; set; }
