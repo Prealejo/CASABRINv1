@@ -1,0 +1,18 @@
+# --- .NET ---
+bin/
+obj/
+*.user
+appsettings.*.local.json
+
+# --- Node / Web / Móvil ---
+node_modules/
+dist/
+.expo/
+.expo-shared/
+*.log
+npm-debug.log*
+
+# --- Entorno ---
+.env
+.env.local
+.DS_Store

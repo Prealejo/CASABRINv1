@@ -1,0 +1,70 @@
+.layout { display: flex; min-height: 100vh; }
+
+/* ---------------- Menú lateral (blanco) ---------------- */
+.sidebar {
+  width: 256px; flex-shrink: 0; background: var(--white);
+  border-right: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  padding: 1.1rem 0.85rem; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+
+.marca {
+  display: flex; align-items: center; justify-content: center; position: relative;
+  padding: 0.25rem 0.5rem 1.1rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--line);
+}
+.marca-logo { display: block; width: 100%; max-width: 188px; height: auto; }
+.sidebar-cerrar { display: none; position: absolute; top: 0; right: 0; border: none; }
+
+.nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav-item {
+  position: relative; display: flex; align-items: center; gap: 0.7rem;
+  height: 2.6rem; padding: 0 0.8rem; border-radius: var(--radius-sm);
+  color: var(--gray-700); font-size: 0.9rem; font-weight: 500;
+  transition: background 0.15s, color 0.15s; text-decoration: none;
+}
+.nav-item:hover { background: var(--gray-100); color: var(--gray-900); text-decoration: none; }
+.nav-item .nav-icon { color: var(--gray-500); flex-shrink: 0; }
+.nav-item.activo { background: var(--brand-50); color: var(--brand-700); font-weight: 600; }
+.nav-item.activo .nav-icon { color: var(--brand-600); }
+.nav-item.activo::before {
+  content: ''; position: absolute; left: -0.85rem; top: 0.45rem; bottom: 0.45rem;
+  width: 3px; border-radius: 0 3px 3px 0; background: var(--brand-600);
+}
+.nav-item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.sidebar-pie { border-top: 1px solid var(--line); padding-top: 0.9rem; margin-top: 0.9rem; }
+.usuario-box { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0.75rem; padding: 0 0.3rem; }
+.usuario-avatar {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  background: var(--brand-600); color: var(--white); display: grid; place-items: center;
+  font-weight: 700; text-transform: uppercase; font-size: 0.9rem;
+}
+.usuario-datos { min-width: 0; }
+.usuario-nombre { font-size: 0.86rem; font-weight: 600; color: var(--gray-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usuario-rol { font-size: 0.74rem; color: var(--ink-faint); }
+
+/* ---------------- Contenido ---------------- */
+.contenido { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar { display: none; }
+.main { padding: 2rem; max-width: 1200px; width: 100%; margin: 0 auto; }
+
+.overlay { display: none; }
+
+@media (max-width: 860px) {
+  .sidebar {
+    position: fixed; left: 0; top: 0; z-index: 50; transform: translateX(-100%);
+    transition: transform 0.2s ease; box-shadow: var(--shadow-lg);
+  }
+  .sidebar.abierto { transform: translateX(0); }
+  .sidebar-cerrar { display: inline-flex; }
+  .marca { justify-content: flex-start; }
+  .marca-logo { max-width: 150px; }
+  .topbar {
+    display: flex; align-items: center; gap: 0.75rem; padding: 0.55rem 1rem;
+    background: var(--white); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20;
+  }
+  .topbar .btn { border: none; }
+  .topbar-logo { height: 36px; width: auto; }
+  .main { padding: 1.25rem 1rem; }
+  .overlay { display: block; position: fixed; inset: 0; background: rgba(31, 35, 40, 0.45); z-index: 40; }
+}
