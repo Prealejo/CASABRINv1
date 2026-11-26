@@ -2,7 +2,7 @@
 
 /* ---------------- Menú lateral (blanco) ---------------- */
 .sidebar {
-  width: 256px; flex-shrink: 0; background: var(--white);
+  width: 232px; flex-shrink: 0; background: var(--white);
   border-right: 1px solid var(--line);
   display: flex; flex-direction: column;
   padding: 1.1rem 0.85rem; position: sticky; top: 0; height: 100vh; overflow-y: auto;
@@ -46,7 +46,7 @@
 /* ---------------- Contenido ---------------- */
 .contenido { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .topbar { display: none; }
-.main { padding: 2rem; max-width: 1200px; width: 100%; margin: 0 auto; }
+.main { padding: 1.75rem clamp(1.25rem, 2.2vw, 2rem) 2.5rem; max-width: 1680px; width: 100%; margin: 0 auto; }
 
 .overlay { display: none; }
 
@@ -77,3 +77,18 @@
   font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
   color: var(--gray-500); padding: 0 0.8rem 0.25rem;
 }
+
+/* Ajustes del menú: legibilidad, hover gris y estado activo discreto */
+.marca-logo { max-width: 172px; }
+.nav-item { font-size: 14px; height: 2.4rem; }
+.nav-item:hover { background: var(--gray-100); }
+.nav-item .nav-icon { color: var(--gray-500); }
+.nav-grupo + .nav-grupo { margin-top: 1rem; }
+.nav-grupo-titulo { font-size: 11px; color: var(--gray-500); letter-spacing: 0.08em; padding-bottom: 0.3rem; }
+.sidebar-pie .btn { height: 2.125rem; color: var(--ink-soft); border-color: var(--line); }
+.usuario-avatar { background: var(--gray-700); }
+
+/* Menú: 240 px y opciones en una sola línea */
+.sidebar { width: 240px; padding-left: 0.7rem; padding-right: 0.7rem; }
+.nav-item { height: auto; min-height: 2.4rem; padding: 0.45rem 0.65rem; gap: 0.6rem; white-space: nowrap; }
+.nav-item.activo::before { left: -0.7rem; }

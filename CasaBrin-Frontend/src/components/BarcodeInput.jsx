@@ -9,9 +9,11 @@ import { ScanBarcode, Search } from 'lucide-react'
  */
 export default function BarcodeInput({
   onScan,
-  placeholder = 'Escanea o escribe el código…',
+  placeholder = 'Escanea o escribe el código',
   label = 'Código de barras del rollo',
+  ayuda = 'Utiliza el lector de códigos o ingresa el código manualmente.',
   autoFocus = true,
+  focoSenal = 0,   // al cambiar, devuelve el foco al campo (p. ej. tras registrar un corte)
 }) {
   const id = useId()
   const ref = useRef(null)
@@ -19,7 +21,7 @@ export default function BarcodeInput({
 
   useEffect(() => {
     if (autoFocus) ref.current?.focus()
-  }, [autoFocus])
+  }, [autoFocus, focoSenal])
 
   function enviar() {
     const cod = valor.trim()
@@ -56,7 +58,7 @@ export default function BarcodeInput({
       <label htmlFor={id}>{label}</label>
       <div className="escaner-fila">
         <div className="control con-icono escaner-control">
-          <ScanBarcode className="control-icono" size={22} strokeWidth={1.75} aria-hidden="true" />
+          <ScanBarcode className="control-icono" size={20} strokeWidth={1.75} aria-hidden="true" />
           <input
             id={id}
             ref={ref}
@@ -69,7 +71,7 @@ export default function BarcodeInput({
             autoComplete="off"
             spellCheck={false}
             inputMode="text"
-            aria-describedby={`${id}-ayuda`}
+            aria-describedby={ayuda ? `${id}-ayuda` : undefined}
           />
         </div>
         <button type="button" className="btn btn-primary escaner-btn" onClick={enviar}>
@@ -77,7 +79,7 @@ export default function BarcodeInput({
           Buscar
         </button>
       </div>
-      <span className="campo-ayuda" id={`${id}-ayuda`}>Usa la pistola lectora o escribe el código y presiona Enter.</span>
+      {ayuda && <span className="campo-ayuda" id={`${id}-ayuda`}>{ayuda}</span>}
     </div>
   )
 }

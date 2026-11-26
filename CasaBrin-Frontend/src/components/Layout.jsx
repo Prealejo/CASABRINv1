@@ -1,39 +1,31 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import {
-  LayoutDashboard, Warehouse, PackagePlus, ScanBarcode,
-  Tag, ClipboardList, Users, LogOut, Menu, X,
+  LayoutDashboard, PackagePlus, Barcode, Layers, ScanBarcode, History, Users, LogOut, Menu, X,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import logo from '../assets/logo-casabrin-h.png'
 import { ICONO } from './ui.jsx'
 import './layout.css'
 
-// Menú ordenado según el flujo real de un rollo en Casa Brin:
-// llega (ingreso) → se etiqueta → se mueve a donde se vende → se corta → se controla y reporta.
+// Menú agrupado por área de trabajo (sin numeración: no son pasos obligatorios).
 const grupos = [
-  { titulo: null, items: [{ to: '/', label: 'Panel', Icon: LayoutDashboard, end: true }] },
+  { titulo: 'General', items: [{ to: '/', label: 'Panel general', Icon: LayoutDashboard, end: true }] },
   {
-    titulo: '1. Recepción',
+    titulo: 'Recepción',
     items: [
-      { to: '/ingreso', label: 'Ingreso mercadería', Icon: PackagePlus },
-      { to: '/etiquetas', label: 'Etiquetas', Icon: Tag },
+      { to: '/ingreso', label: 'Ingreso de mercadería', Icon: PackagePlus },
+      { to: '/etiquetas', label: 'Etiquetas', Icon: Barcode },
     ],
   },
   {
-    // Inventario concentra la consulta de stock y el traslado de rollos (ventana emergente).
-    titulo: '2. Operación',
+    titulo: 'Operación',
     items: [
-      { to: '/inventario', label: 'Inventario y traslados', Icon: Warehouse },
-      { to: '/escanear', label: 'Escanear / Cortar', Icon: ScanBarcode },
+      { to: '/inventario', label: 'Inventario y traslados', Icon: Layers },
+      { to: '/escanear', label: 'Escanear y cortar', Icon: ScanBarcode },
     ],
   },
-  {
-    titulo: '3. Control',
-    items: [
-      { to: '/reportes', label: 'Movimientos y reporte', Icon: ClipboardList },
-    ],
-  },
+  { titulo: 'Control', items: [{ to: '/reportes', label: 'Movimientos y reporte', Icon: History }] },
 ]
 const grupoAdmin = { titulo: 'Administración', items: [{ to: '/usuarios', label: 'Usuarios', Icon: Users }] }
 
@@ -61,7 +53,7 @@ export default function Layout() {
 
         <nav className="nav">
           {visibles.map((g, gi) => (
-            <div className="nav-grupo" key={g.titulo || gi} role="group" aria-label={g.titulo || 'Inicio'}>
+            <div className="nav-grupo" key={g.titulo || gi} role="group" aria-label={g.titulo}>
               {g.titulo && <div className="nav-grupo-titulo" aria-hidden="true">{g.titulo}</div>}
               {g.items.map(({ to, label, Icon, end }) => (
                 <NavLink

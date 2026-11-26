@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client.js'
 import BarcodeInput from '../components/BarcodeInput.jsx'
-import { Cylinder, Barcode, MapPin, Ruler, Scissors, StickyNote, Route, SwatchBook } from 'lucide-react'
+import { Barcode, Scissors, History } from 'lucide-react'
 import { fmtMetros } from '../lib/format.js'
 import Campo from '../components/Campo.jsx'
-import { ICONO, ICONO_SM, EstadoBadge, UbicacionBadge, CodigoColorBadge, ProveedorTexto, Mensaje } from '../components/ui.jsx'
+import { Encabezado, EstadoBadge, UbicacionBadge, CodigoColorBadge, Mensaje, Vacio, Cargando } from '../components/ui.jsx'
+import './pages.css'
 
 const CORTES_RAPIDOS = [0.5, 1, 2, 3, 5, 10]
-import './pages.css'
 
 export default function Escanear() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -20,6 +20,7 @@ export default function Escanear() {
   const [error, setError] = useState('')
   const [resultado, setResultado] = useState(null)
   const [telaStock, setTelaStock] = useState(null)   // stock total de la tela del rollo
+  const [focoSenal, setFocoSenal] = useState(0)      // tras un corte, el foco vuelve al lector
 
   // Consulta el stock total de la tela para avisar si está en alerta.
   async function cargarStockTela(idTela) {
@@ -82,6 +83,7 @@ export default function Escanear() {
       cargarStockTela(rollo.idTela)   // re-evalúa la alerta de stock de la tela
       setMetros('')
       setObservacion('')
+      setFocoSenal((n) => n + 1)   // listo para escanear el siguiente rollo
     } catch (e) {
       setError(e.message)
     } finally {
@@ -91,146 +93,106 @@ export default function Escanear() {
 
   return (
     <div>
-      <div className="page-head">
-        <div>
-          <h1>Escanear y cortar</h1>
-          <p>Escanea el código del rollo con la pistola lectora o escríbelo a mano.</p>
-        </div>
-      </div>
+      <Encabezado titulo="Escanear y cortar" subtitulo="Consulta un rollo y registra los metros vendidos" />
 
-      <div className="card mb">
-        <BarcodeInput onScan={buscar} />
-        {buscando && <Mensaje tipo="info" style={{ marginTop: '0.9rem', marginBottom: 0 }}>Buscando rollo…</Mensaje>}
-      </div>
+      <section className="panel panel-cuerpo escaner-panel">
+        <BarcodeInput onScan={buscar} focoSenal={focoSenal} />
+      </section>
 
-      {error && <Mensaje tipo="error">{error}</Mensaje>}
-
+      {error && <Mensaje tipo="error" style={{ marginTop: '1rem' }}>{error}</Mensaje>}
+      {resultado && (
+        <Mensaje tipo="ok" style={{ marginTop: '1rem' }}>
+          Corte registrado: se sacaron <strong>{fmtMetros(resultado.metrosAntes - resultado.metrosDespues)}</strong>.
+          Quedan {fmtMetros(resultado.metrosDespues)} en el rollo{resultado.estado === 'Agotado' ? ' (ahora AGOTADO)' : ''}. Puedes escanear el siguiente rollo.
+        </Mensaje>
+      )}
       {telaStock?.bajoStock && (
-        <Mensaje tipo="alerta" className="mb">
-          <strong>Stock bajo:</strong> a <strong>{telaStock.nombre}</strong> le quedan solo{' '}
-          <strong>{fmtMetros(telaStock.metrosTotales)}</strong> en total (mínimo configurado: {fmtMetros(telaStock.stockMinimo)}).
-          Considera reabastecer antes de que llegue a 0.
+        <Mensaje tipo="alerta" style={{ marginTop: '1rem' }}>
+          Stock bajo: a <strong>{telaStock.nombre}</strong> le quedan {fmtMetros(telaStock.metrosTotales)} en total (mínimo {fmtMetros(telaStock.stockMinimo)}).
         </Mensaje>
       )}
 
-      {rollo && (
-        <div className="escaner-grid">
-          {/* --------- Detalle del rollo --------- */}
-          <div className="card rollo-detalle-card">
-            <div className="seccion-titulo" style={{ marginBottom: '0.6rem' }}>
-              <span className="titulo-icono"><Cylinder {...ICONO} aria-hidden="true" />Rollo escaneado</span>
+      {buscando ? (
+        <div className="panel bloque"><Cargando>Buscando rollo…</Cargando></div>
+      ) : !rollo ? (
+        <div className="panel bloque">
+          <Vacio icon={Barcode} titulo="Esperando código de rollo">Escanea un código para consultar su disponibilidad.</Vacio>
+        </div>
+      ) : (
+        <div className="corte-grid bloque">
+          {/* --------- Rollo encontrado --------- */}
+          <section className="panel" aria-label="Rollo encontrado">
+            <div className="panel-cab">
+              <div>
+                <h2>{rollo.telaNombre}</h2>
+                <p className="sub mono">{rollo.codigoBarras}</p>
+              </div>
               <EstadoBadge estado={rollo.estado} />
             </div>
-            <div className="rollo-nombre">
-              {rollo.telaNombre}{rollo.color ? ` · ${rollo.color}` : ''}
-            </div>
-            <div className="rollo-codigo mono"><Barcode {...ICONO_SM} aria-hidden="true" />{rollo.codigoBarras}</div>
-
-            {(rollo.codigoColor || rollo.proveedor) && (
-              <div className="dato-fila">
-                <span className="dato-label"><SwatchBook {...ICONO_SM} aria-hidden="true" />Código de color · proveedor</span>
-                <span className="dato-valor chips" style={{ justifyContent: 'flex-end' }}>
-                  <CodigoColorBadge codigo={rollo.codigoColor} />
-                  <ProveedorTexto nombre={rollo.proveedor} />
-                </span>
+            <div className="panel-cuerpo">
+              <div className="metraje-destacado">
+                <span className="metraje-destacado-etq">Metros disponibles</span>
+                <span className="metraje-destacado-valor">{fmtMetros(rollo.metrosActuales)}</span>
+                <span className="metraje-destacado-sub">de {fmtMetros(rollo.metrosIniciales)} iniciales</span>
               </div>
-            )}
-            <div className="dato-fila">
-              <span className="dato-label"><MapPin {...ICONO_SM} aria-hidden="true" />Ubicación</span>
-              <span className="dato-valor"><UbicacionBadge nombre={rollo.ubicacion} /></span>
+              <dl className="datos">
+                <div><dt>Color</dt><dd>{rollo.color || '—'}{rollo.codigoColor && <> · <CodigoColorBadge codigo={rollo.codigoColor} /></>}</dd></div>
+                <div><dt>Ubicación</dt><dd><UbicacionBadge nombre={rollo.ubicacion} /></dd></div>
+                <div><dt>Proveedor</dt><dd>{rollo.proveedor || '—'}</dd></div>
+              </dl>
+              <Link to={`/reportes?rollo=${encodeURIComponent(rollo.codigoBarras)}`} className="btn btn-secondary btn-sm">
+                <History size={15} strokeWidth={1.9} aria-hidden="true" />Ver historial del rollo
+              </Link>
             </div>
-            <div className="dato-fila">
-              <span className="dato-label"><Ruler {...ICONO_SM} aria-hidden="true" />Metros disponibles</span>
-              <span className="dato-valor grande mono">{fmtMetros(rollo.metrosActuales)}</span>
-            </div>
-            <div className="dato-fila">
-              <span className="dato-label"><Ruler {...ICONO_SM} aria-hidden="true" />Metros iniciales</span>
-              <span className="dato-valor mono">{fmtMetros(rollo.metrosIniciales)}</span>
-            </div>
-            <Link to={`/reportes?rollo=${encodeURIComponent(rollo.codigoBarras)}`} className="btn btn-ghost btn-sm" style={{ marginTop: '0.75rem' }}>
-              <Route size={14} strokeWidth={2} aria-hidden="true" />Ver trazabilidad del rollo
-            </Link>
-          </div>
+          </section>
 
-          {/* --------- Panel de corte --------- */}
-          <div className="card">
-            <div className="seccion-titulo" style={{ marginBottom: '0.8rem' }}>
-              <span className="titulo-icono"><Scissors {...ICONO} aria-hidden="true" />Cortar metros</span>
-            </div>
-
-            <Campo
-              label="Metros a cortar"
-              icon={Ruler}
-              error={excede ? `Solo hay ${fmtMetros(rollo.metrosActuales)} disponibles.` : undefined}
-            >
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={metros}
-                onChange={(e) => setMetros(e.target.value)}
-                placeholder="Ej. 3.5"
-                disabled={rollo.estado !== 'Disponible'}
-                autoFocus
-              />
-            </Campo>
-
-            {rollo.estado === 'Disponible' && (
-              <div className="cortes-rapidos" role="group" aria-label="Metros rápidos">
-                {CORTES_RAPIDOS.filter((m) => m <= Number(rollo.metrosActuales)).map((m) => (
+          {/* --------- Formulario de corte --------- */}
+          <section className="panel" aria-label="Registrar corte">
+            <div className="panel-cab"><h2>Registrar corte</h2></div>
+            <div className="panel-cuerpo">
+              <Campo label="Metros a cortar" error={excede ? `Solo hay ${fmtMetros(rollo.metrosActuales)} disponibles.` : undefined}>
+                <input
+                  type="number" min="0.01" step="0.01" value={metros}
+                  onChange={(e) => setMetros(e.target.value)}
+                  placeholder="Ej. 3.5"
+                  disabled={rollo.estado !== 'Disponible'}
+                  autoFocus
+                  className="input-corte"
+                />
+              </Campo>
+              {rollo.estado === 'Disponible' && (
+                <div className="cortes-rapidos" role="group" aria-label="Metros rápidos">
+                  {CORTES_RAPIDOS.filter((m) => m <= Number(rollo.metrosActuales)).map((m) => (
+                    <button key={m} type="button" className={`chip-btn ${metrosNum === m ? 'activo' : ''}`} onClick={() => setMetros(String(m))} aria-pressed={metrosNum === m}>
+                      {fmtMetros(m)}
+                    </button>
+                  ))}
                   <button
-                    key={m}
                     type="button"
-                    className={`chip-btn ${metrosNum === m ? 'activo' : ''}`}
-                    onClick={() => setMetros(String(m))}
-                    aria-pressed={metrosNum === m}
+                    className={`chip-btn ${metrosNum === Number(rollo.metrosActuales) ? 'activo' : ''}`}
+                    onClick={() => setMetros(String(Number(rollo.metrosActuales)))}
+                    aria-pressed={metrosNum === Number(rollo.metrosActuales)}
                   >
-                    {fmtMetros(m)}
+                    Todo el rollo
                   </button>
-                ))}
-                <button
-                  type="button"
-                  className={`chip-btn ${metrosNum === Number(rollo.metrosActuales) ? 'activo' : ''}`}
-                  onClick={() => setMetros(String(Number(rollo.metrosActuales)))}
-                  aria-pressed={metrosNum === Number(rollo.metrosActuales)}
-                >
-                  Todo ({fmtMetros(rollo.metrosActuales)})
-                </button>
-              </div>
-            )}
+                </div>
+              )}
+              <Campo label="Observación (opcional)">
+                <input value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Ej. Venta mostrador" disabled={rollo.estado !== 'Disponible'} />
+              </Campo>
 
-            <Campo label="Observación (opcional)" icon={StickyNote}>
-              <input
-                value={observacion}
-                onChange={(e) => setObservacion(e.target.value)}
-                placeholder="Ej. Venta mostrador, cliente X…"
-                disabled={rollo.estado !== 'Disponible'}
-              />
-            </Campo>
-
-            {metrosNum > 0 && !excede && (
-              <div className="previa-corte" aria-live="polite">
-                <span>{fmtMetros(rollo.metrosActuales)}</span>
-                <span className="tenue">−</span>
-                <strong>{fmtMetros(metrosNum)}</strong>
-                <span className="tenue">=</span>
-                <span>quedan <strong>{fmtMetros(Number(rollo.metrosActuales) - metrosNum)}</strong></span>
+              <div className="corte-resumen" aria-live="polite">
+                <div><span>A cortar</span><strong>{fmtMetros(metrosNum)}</strong></div>
+                <div><span>Quedarán</span><strong className={excede ? 'texto-error' : ''}>{excede ? '—' : fmtMetros(Number(rollo.metrosActuales) - metrosNum)}</strong></div>
               </div>
-            )}
-            <button type="button" className="btn btn-primary btn-block" onClick={cortar} disabled={!puedeCortar || cortando}>
-              <Scissors {...ICONO} aria-hidden="true" />
-              {cortando ? 'Registrando corte…' : (metrosNum > 0 ? `Cortar ${fmtMetros(metrosNum)}` : 'Cortar')}
-            </button>
-          </div>
+
+              <button type="button" className="btn btn-primary btn-block" onClick={cortar} disabled={!puedeCortar || cortando}>
+                <Scissors size={17} strokeWidth={1.9} aria-hidden="true" />
+                {cortando ? 'Registrando corte…' : (metrosNum > 0 ? `Cortar ${fmtMetros(metrosNum)}` : 'Cortar')}
+              </button>
+            </div>
+          </section>
         </div>
-      )}
-
-      {resultado && (
-        <Mensaje tipo="ok" style={{ marginTop: '1.25rem' }}>
-          Corte registrado: se sacaron <strong>{fmtMetros(resultado.metrosAntes - resultado.metrosDespues)}</strong>.
-          Quedan {fmtMetros(resultado.metrosDespues)} en el rollo{resultado.estado === 'Agotado' ? ' (ahora AGOTADO)' : ''}.
-          {' '}El corte quedó registrado en <Link to={`/reportes?rollo=${encodeURIComponent(rollo?.codigoBarras || '')}`}>el historial del rollo</Link>.
-        </Mensaje>
       )}
     </div>
   )

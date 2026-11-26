@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
-  TriangleAlert, CircleCheck, History, List, Calendar, Filter, RotateCcw, SearchX, ChevronLeft, ChevronRight,
-  Cylinder, Barcode, Layers, Download, Printer, X, Route, Ruler, Scissors,
+  TriangleAlert, Filter, SearchX, ChevronLeft, ChevronRight, ChevronDown, Download, Printer, X,
 } from 'lucide-react'
 import { api } from '../api/client.js'
 import { fmtMetros, fmtNum, fmtFecha, fmtSoloFecha, rangoUtc } from '../lib/format.js'
-import Campo from '../components/Campo.jsx'
 import {
-  ICONO, ICONO_SM, TipoMovimiento, EstadoBadge, UbicacionBadge, CodigoColorBadge, ProveedorTexto, Vacio, Cargando, Mensaje,
+  Encabezado, TipoMovimiento, EstadoBadge, UbicacionBadge, CodigoColorBadge, Vacio, Mensaje,
 } from '../components/ui.jsx'
 import './pages.css'
 
@@ -55,6 +53,7 @@ export default function Reportes() {
   const [cargando, setCargando] = useState(true)
   const [exportando, setExportando] = useState(false)
   const [error, setError] = useState('')
+  const [verAlertas, setVerAlertas] = useState(null)   // null = automático (abiertas si son pocas)
 
   useEffect(() => {
     ;(async () => {
@@ -206,23 +205,27 @@ export default function Reportes() {
   }
 
   const cortado = rollo ? Math.max(0, Number(rollo.metrosIniciales) - Number(rollo.metrosActuales)) : 0
+  const alertasAbiertas = verAlertas ?? alertas.length <= 5
+  // Fila de indicadores: los tres tipos principales y el total; los demás solo si aparecen.
+  const INDICADORES = [
+    { tipo: 'Ingreso', texto: 'Ingresos' },
+    { tipo: 'Traslado', texto: 'Traslados' },
+    { tipo: 'Salida', texto: 'Salidas' },
+    ...(porTipo.Ajuste ? [{ tipo: 'Ajuste', texto: 'Ajustes' }] : []),
+    ...(porTipo.Anulacion ? [{ tipo: 'Anulacion', texto: 'Anulaciones' }] : []),
+  ]
 
   return (
     <div>
-      <div className="page-head">
-        <div>
-          <h1>Movimientos y reporte</h1>
-          <p>Trazabilidad de cada rollo: ingreso, traslados, cortes, ajustes y anulaciones.</p>
-        </div>
-        <div className="no-print" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div className="no-print">
+        <Encabezado titulo="Movimientos y reportes" subtitulo="Historial y control de operaciones">
           <button type="button" className="btn btn-secondary" onClick={() => window.print()} disabled={!movs.total}>
-            <Printer size={16} strokeWidth={1.75} aria-hidden="true" />Imprimir
+            <Printer size={16} strokeWidth={1.9} aria-hidden="true" />Imprimir
           </button>
           <button type="button" className="btn btn-primary" onClick={exportar} disabled={!movs.total || exportando}>
-            <Download size={16} strokeWidth={1.75} aria-hidden="true" />
-            {exportando ? 'Exportando…' : 'Exportar a Excel (CSV)'}
+            <Download size={16} strokeWidth={1.9} aria-hidden="true" />{exportando ? 'Exportando…' : 'Exportar CSV'}
           </button>
-        </div>
+        </Encabezado>
       </div>
 
       {/* Encabezado solo para la versión impresa */}
@@ -234,152 +237,149 @@ export default function Reportes() {
 
       {error && <Mensaje tipo="error" className="no-print">{error}</Mensaje>}
 
-      {/* -------- Alertas de stock bajo -------- */}
+      {/* -------- Alertas de stock bajo (compactas y plegables) -------- */}
       {!aplicados.rollo && (
-        <div className="seccion no-print" style={{ marginTop: 0 }}>
-          <div className="seccion-titulo">
-            <span className="titulo-icono alerta"><TriangleAlert {...ICONO} aria-hidden="true" />Alertas de stock bajo</span>
-            {alertas.length > 0 && <span className="badge badge-alerta">{alertas.length} tela{alertas.length !== 1 ? 's' : ''}</span>}
-          </div>
-          <div className="card card-flush">
-            {alertas.length === 0 ? (
-              <Vacio icon={CircleCheck} titulo="Sin alertas">Ninguna tela está por debajo de su stock mínimo.</Vacio>
-            ) : (
-              <div className="tabla-scroll">
-                <table className="tabla">
-                  <thead>
-                    <tr>
-                      <th>Código</th>
-                      <th>Tela</th>
-                      <th>Tipo</th>
-                      <th className="num">Stock mínimo</th>
-                      <th className="num">Metros actuales</th>
-                      <th className="num">Rollos</th>
+        <section className={`panel alertas-panel no-print ${alertas.length ? 'con-alertas' : ''}`}>
+          <button
+            type="button"
+            className="alertas-cab"
+            onClick={() => setVerAlertas(!alertasAbiertas)}
+            aria-expanded={alertasAbiertas}
+            disabled={!alertas.length}
+          >
+            <TriangleAlert size={17} strokeWidth={1.9} aria-hidden="true" className={alertas.length ? 'icono-alerta' : 'icono-neutro'} />
+            <span className="alertas-titulo">Alertas de stock bajo</span>
+            <span className={`badge ${alertas.length ? 'badge-alerta' : 'badge-neutro'}`}>
+              {alertas.length ? `${alertas.length} tela${alertas.length !== 1 ? 's' : ''}` : 'Sin alertas'}
+            </span>
+            {alertas.length > 0 && <ChevronDown size={16} strokeWidth={2} aria-hidden="true" className={`alertas-chevron ${alertasAbiertas ? 'abierto' : ''}`} />}
+          </button>
+          {alertas.length > 0 && alertasAbiertas && (
+            <div className="tabla-scroll">
+              <table className="tabla">
+                <thead>
+                  <tr>
+                    <th>Código</th><th>Tela</th><th>Tipo</th>
+                    <th className="num">Stock mínimo</th><th className="num">Metros actuales</th><th className="num">Rollos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alertas.map((a) => (
+                    <tr key={a.idTela}>
+                      <td className="codigo">{a.codigo}</td>
+                      <td>{a.nombre}</td>
+                      <td>{a.tipoTela}</td>
+                      <td className="num mono">{fmtMetros(a.stockMinimo)}</td>
+                      <td className="num mono texto-alerta">{fmtMetros(a.metrosTotales)}</td>
+                      <td className="num mono">{fmtNum(a.rollosDisponibles)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {alertas.map((a) => (
-                      <tr key={a.idTela}>
-                        <td className="mono">{a.codigo}</td>
-                        <td>{a.nombre}</td>
-                        <td>{a.tipoTela}</td>
-                        <td className="mono num">{fmtMetros(a.stockMinimo)}</td>
-                        <td className="mono num" style={{ color: 'var(--warn-700)', fontWeight: 700 }}>{fmtMetros(a.metrosTotales)}</td>
-                        <td className="mono num">{fmtNum(a.rollosDisponibles)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       )}
 
       {/* -------- Filtros -------- */}
-      <div className="seccion" style={aplicados.rollo ? { marginTop: 0 } : undefined}>
-        <div className="seccion-titulo no-print">
-          <span className="titulo-icono"><History {...ICONO} aria-hidden="true" />Historial de movimientos</span>
-        </div>
-
+      <section className="bloque">
+        <div className="bloque-cab no-print"><h2>Historial de movimientos</h2></div>
         <form
-          className="card mb no-print"
+          className="panel filtros-linea no-print"
           onSubmit={(e) => { e.preventDefault(); aplicar() }}
           role="search"
           aria-label="Filtros del reporte"
         >
-          <div className="fila fila-fin">
-            <Campo label="Código de rollo" icon={Barcode} style={{ flex: 1.3 }}>
-              <input
-                className="mono"
-                value={filtros.rollo}
-                onChange={(e) => setFiltros({ ...filtros, rollo: e.target.value })}
-                placeholder="Escanea o escribe"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </Campo>
-            <Campo label="Tela" icon={Layers} style={{ flex: 1.5 }}>
-              <select value={filtros.idTela} onChange={(e) => setFiltros({ ...filtros, idTela: e.target.value })}>
-                <option value="">Todas</option>
-                {telas.map((t) => <option key={t.idTela} value={t.idTela}>{t.codigo} · {t.nombre}{t.codigoColor ? ` · ${t.codigoColor}` : ''}</option>)}
-              </select>
-            </Campo>
-            <Campo label="Tipo" icon={List}>
-              <select value={filtros.tipo} onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}>
-                <option value="">Todos</option>
-                {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Campo>
-            <Campo label="Desde" icon={Calendar}>
-              <input type="date" value={filtros.desde} onChange={(e) => setFiltros({ ...filtros, desde: e.target.value })} />
-            </Campo>
-            <Campo label="Hasta" icon={Calendar}>
-              <input type="date" value={filtros.hasta} min={filtros.desde || undefined} onChange={(e) => setFiltros({ ...filtros, hasta: e.target.value })} />
-            </Campo>
-          </div>
-          <div className="filtros-acciones">
-            <button type="submit" className="btn btn-primary">
-              <Filter size={16} strokeWidth={1.75} aria-hidden="true" />Filtrar
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={limpiar} disabled={!hayFiltros && !Object.values(filtros).some(Boolean)}>
-              <RotateCcw size={16} strokeWidth={1.75} aria-hidden="true" />Limpiar
-            </button>
-          </div>
+          <label className="filtro">
+            <span>Código de rollo</span>
+            <input
+              className="mono"
+              value={filtros.rollo}
+              onChange={(e) => setFiltros({ ...filtros, rollo: e.target.value })}
+              placeholder="Escanea o escribe"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+          <label className="filtro ancho">
+            <span>Tela</span>
+            <select value={filtros.idTela} onChange={(e) => setFiltros({ ...filtros, idTela: e.target.value })}>
+              <option value="">Todas</option>
+              {telas.map((t) => <option key={t.idTela} value={t.idTela}>{t.codigo} · {t.nombre}{t.codigoColor ? ` · ${t.codigoColor}` : ''}</option>)}
+            </select>
+          </label>
+          <label className="filtro">
+            <span>Tipo</span>
+            <select value={filtros.tipo} onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}>
+              <option value="">Todos</option>
+              {TIPOS.map((t) => <option key={t} value={t}>{t === 'Anulacion' ? 'Anulación' : t}</option>)}
+            </select>
+          </label>
+          <label className="filtro">
+            <span>Desde</span>
+            <input type="date" value={filtros.desde} onChange={(e) => setFiltros({ ...filtros, desde: e.target.value })} />
+          </label>
+          <label className="filtro">
+            <span>Hasta</span>
+            <input type="date" value={filtros.hasta} min={filtros.desde || undefined} onChange={(e) => setFiltros({ ...filtros, hasta: e.target.value })} />
+          </label>
+          <button type="submit" className="btn btn-primary">
+            <Filter size={15} strokeWidth={1.9} aria-hidden="true" />Filtrar
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={limpiar} disabled={!hayFiltros && !Object.values(filtros).some(Boolean)}>
+            Limpiar
+          </button>
         </form>
 
         {/* -------- Trazabilidad del rollo -------- */}
         {rollo && (
-          <div className="card mb traza-card">
-            <div className="seccion-titulo" style={{ marginBottom: '0.75rem' }}>
-              <span className="titulo-icono"><Route {...ICONO} aria-hidden="true" />Trazabilidad del rollo</span>
-              <button type="button" className="btn btn-ghost btn-sm no-print" onClick={limpiar}>
-                <X size={14} strokeWidth={2} aria-hidden="true" />Quitar filtro
-              </button>
-            </div>
-            <div className="traza-cab">
+          <section className="panel traza-panel">
+            <div className="panel-cab">
               <div>
-                <div className="rollo-nombre">{rollo.telaNombre}{rollo.color ? ` · ${rollo.color}` : ''}</div>
-                <div className="rollo-codigo mono" style={{ marginBottom: 0 }}><Barcode {...ICONO_SM} aria-hidden="true" />{rollo.codigoBarras}</div>
+                <h2>Trazabilidad · {rollo.telaNombre}{rollo.color ? ` · ${rollo.color}` : ''}</h2>
+                <p className="sub mono">{rollo.codigoBarras}</p>
               </div>
               <div className="chips">
                 <CodigoColorBadge codigo={rollo.codigoColor} />
-                <ProveedorTexto nombre={rollo.proveedor} />
                 <EstadoBadge estado={rollo.estado} />
                 <UbicacionBadge nombre={rollo.ubicacion} />
+                <button type="button" className="btn btn-ghost btn-sm no-print" onClick={limpiar}>
+                  <X size={14} strokeWidth={2} aria-hidden="true" />Quitar filtro
+                </button>
               </div>
             </div>
-            <div className="traza-cifras">
-              <div><span><Calendar {...ICONO_SM} aria-hidden="true" />Ingreso</span><strong>{fmtSoloFecha(rollo.fechaIngreso)}</strong></div>
-              <div><span><Ruler {...ICONO_SM} aria-hidden="true" />Metros iniciales</span><strong>{fmtMetros(rollo.metrosIniciales)}</strong></div>
-              <div><span><Scissors {...ICONO_SM} aria-hidden="true" />Cortado / ajustado</span><strong>{fmtMetros(cortado)}</strong></div>
-              <div><span><Cylinder {...ICONO_SM} aria-hidden="true" />Saldo actual</span><strong className="traza-saldo">{fmtMetros(rollo.metrosActuales)}</strong></div>
-            </div>
-          </div>
+            <dl className="traza-datos">
+              <div><dt>Ingreso</dt><dd>{fmtSoloFecha(rollo.fechaIngreso)}</dd></div>
+              <div><dt>Metros iniciales</dt><dd>{fmtMetros(rollo.metrosIniciales)}</dd></div>
+              <div><dt>Cortado / ajustado</dt><dd>{fmtMetros(cortado)}</dd></div>
+              <div><dt>Saldo actual</dt><dd className="saldo">{fmtMetros(rollo.metrosActuales)}</dd></div>
+              {rollo.proveedor && <div><dt>Proveedor</dt><dd>{rollo.proveedor}</dd></div>}
+            </dl>
+          </section>
         )}
 
-        {/* -------- Resumen del reporte -------- */}
+        {/* -------- Indicadores de movimientos -------- */}
         {resumen && resumen.total > 0 && (
-          <div className="resumen-tipos" aria-label="Resumen por tipo de movimiento">
-            {TIPOS.filter((t) => porTipo[t]).map((t) => (
-              <div className="resumen-tipo" key={t}>
-                <TipoMovimiento tipo={t} />
-                <div className="resumen-tipo-cifra">{fmtNum(porTipo[t].cantidad)}</div>
-                <div className="resumen-tipo-sub">{fmtMetros(porTipo[t].metros)}</div>
+          <div className="indicadores-mov" aria-label="Resumen por tipo de movimiento">
+            {INDICADORES.map(({ tipo, texto }) => (
+              <div key={tipo} className="indicador-mov">
+                <span className="indicador-mov-etq">{texto}</span>
+                <span className="indicador-mov-valor">{fmtNum(porTipo[tipo]?.cantidad || 0)}</span>
+                <span className="indicador-mov-sub">{fmtMetros(porTipo[tipo]?.metros || 0)}</span>
               </div>
             ))}
-            <div className="resumen-tipo total">
-              <span className="badge badge-neutro">Total</span>
-              <div className="resumen-tipo-cifra">{fmtNum(resumen.total)}</div>
-              <div className="resumen-tipo-sub">movimientos</div>
+            <div className="indicador-mov total">
+              <span className="indicador-mov-etq">Total de movimientos</span>
+              <span className="indicador-mov-valor">{fmtNum(resumen.total)}</span>
+              <span className="indicador-mov-sub">{descripcionFiltros === 'Todos los movimientos' ? 'Sin filtros' : 'Según los filtros'}</span>
             </div>
           </div>
         )}
 
         {/* -------- Tabla -------- */}
-        <div className="card card-flush">
+        <div className="panel">
           {cargando ? (
-            <Cargando>Cargando movimientos…</Cargando>
+            <div className="filas-esqueleto" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <span key={i} className="esq esq-linea" />)}</div>
           ) : movs.items.length === 0 ? (
             <Vacio icon={SearchX} titulo="Sin resultados">
               {hayFiltros ? 'No hay movimientos con esos filtros.' : 'Aún no hay movimientos registrados.'}
@@ -395,7 +395,7 @@ export default function Reportes() {
                     {!rollo && <th>Tela</th>}
                     {!rollo && <th>Rollo</th>}
                     <th className="num">Metros</th>
-                    <th className="num">Antes → Después</th>
+                    <th className="num">Antes → después</th>
                     <th>Ubicación</th>
                     <th>Usuario</th>
                     <th>Observación</th>
@@ -410,24 +410,16 @@ export default function Reportes() {
                       {!rollo && <td>{m.tela}</td>}
                       {!rollo && (
                         <td>
-                          <button
-                            type="button"
-                            className="enlace-codigo mono"
-                            onClick={() => verRollo(m.codigoBarras)}
-                            title="Ver trazabilidad de este rollo"
-                            aria-label={`Ver trazabilidad del rollo ${m.codigoBarras}`}
-                          >
+                          <button type="button" className="codigo enlace-discreto" onClick={() => verRollo(m.codigoBarras)} title="Ver trazabilidad del rollo">
                             {m.codigoBarras}
                           </button>
                         </td>
                       )}
-                      <td className="mono num"><strong>{fmtMetros(m.metros)}</strong></td>
-                      <td className="mono num tenue nowrap">
-                        {fmtMetros(m.metrosAntes)} → {fmtMetros(m.metrosDespues)}
-                      </td>
-                      <td className="nowrap" style={{ fontSize: '0.82rem' }}>
+                      <td className="num mono"><strong>{fmtMetros(m.metros)}</strong></td>
+                      <td className="num mono nowrap tenue">{fmtMetros(m.metrosAntes)}<span className="flecha">→</span>{fmtMetros(m.metrosDespues)}</td>
+                      <td className="nowrap">
                         {m.ubicacionOrigen && m.ubicacionDestino
-                          ? <>{m.ubicacionOrigen} <span className="tenue">→</span> {m.ubicacionDestino}</>
+                          ? <>{m.ubicacionOrigen}<span className="flecha">→</span>{m.ubicacionDestino}</>
                           : (m.ubicacionDestino || m.ubicacionOrigen || '—')}
                       </td>
                       <td>{m.usuario}</td>
@@ -442,31 +434,23 @@ export default function Reportes() {
 
         {movs.total > 0 && (
           <nav className="paginacion no-print" aria-label="Paginación">
-            <span className="paginacion-info">
-              {fmtNum(movs.total)} movimientos · página {page} de {totalPaginas}
-            </span>
+            <span className="paginacion-info">{fmtNum(movs.total)} movimientos · página {page} de {totalPaginas}</span>
             <div className="paginacion-botones">
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => irA(page - 1)} disabled={page <= 1}>
-                <ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />Anterior
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => irA(page - 1)} disabled={page <= 1}>
+                <ChevronLeft size={16} strokeWidth={1.9} aria-hidden="true" />Anterior
               </button>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => irA(page + 1)} disabled={page >= totalPaginas}>
-                Siguiente<ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" />
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => irA(page + 1)} disabled={page >= totalPaginas}>
+                Siguiente<ChevronRight size={16} strokeWidth={1.9} aria-hidden="true" />
               </button>
             </div>
           </nav>
         )}
         {movs.total > PAGE_SIZE && (
           <p className="solo-print" style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
-            Página {page} de {totalPaginas}. Para el reporte completo usa «Exportar a Excel (CSV)».
+            Página {page} de {totalPaginas}. Para el reporte completo usa «Exportar CSV».
           </p>
         )}
-      </div>
-
-      {aplicados.rollo && rollo && (
-        <p className="no-print texto-ayuda" style={{ marginTop: '1rem' }}>
-          <Link to={`/escanear`}>Ir a Escanear / Cortar</Link> · <Link to="/inventario">Trasladar desde Inventario</Link>
-        </p>
-      )}
+      </section>
     </div>
   )
 }

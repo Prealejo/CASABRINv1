@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Truck, Plus, Check, X } from 'lucide-react'
+import { Plus, Check, X } from 'lucide-react'
 import { api } from '../api/client.js'
 import Campo from './Campo.jsx'
 
@@ -47,7 +47,7 @@ export default function ProveedorCampo({ proveedores, value, onChange, onCreado,
   if (creando) {
     return (
       <div style={style}>
-        <Campo label="Nuevo proveedor" icon={Truck} error={error} style={{ marginBottom: '0.4rem' }}>
+        <Campo label="Nuevo proveedor" error={error} style={{ marginBottom: '0.4rem' }}>
           <input
             ref={inputRef}
             value={nombre}
@@ -74,7 +74,7 @@ export default function ProveedorCampo({ proveedores, value, onChange, onCreado,
 
   return (
     <div className="campo-con-accion" style={style}>
-      <Campo label="Proveedor" icon={Truck}>
+      <Campo label="Proveedor">
         <select value={value} onChange={(e) => onChange(e.target.value)}>
           <option value="">— Sin proveedor —</option>
           {proveedores.map((p) => <option key={p.idProveedor} value={p.idProveedor}>{p.nombre}</option>)}

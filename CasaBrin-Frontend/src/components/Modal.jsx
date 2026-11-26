@@ -7,7 +7,7 @@ import { X } from 'lucide-react'
  * y lo devuelve al elemento que lo abrió. En pantallas estrechas se muestra
  * como hoja inferior (bottom sheet).
  */
-export default function Modal({ abierto, titulo, icono: Icono, onCerrar, children, pie, ancho = 560 }) {
+export default function Modal({ abierto, titulo, icono: Icono, onCerrar, children, pie, ancho = 560, lateral = false }) {
   const idTitulo = useId()
   const ref = useRef(null)
   const previo = useRef(null)
@@ -50,7 +50,7 @@ export default function Modal({ abierto, titulo, icono: Icono, onCerrar, childre
   if (!abierto) return null
 
   return createPortal(
-    <div className="modal-fondo" onMouseDown={(e) => { if (e.target === e.currentTarget) onCerrar?.() }}>
+    <div className={`modal-fondo ${lateral ? 'lateral' : ''}`} onMouseDown={(e) => { if (e.target === e.currentTarget) onCerrar?.() }}>
       <div
         ref={ref}
         className="modal"
@@ -58,7 +58,7 @@ export default function Modal({ abierto, titulo, icono: Icono, onCerrar, childre
         aria-modal="true"
         aria-labelledby={idTitulo}
         tabIndex={-1}
-        style={{ maxWidth: ancho }}
+        style={lateral ? undefined : { maxWidth: ancho }}
       >
         <div className="modal-cab">
           <h2 id={idTitulo} className="modal-titulo">

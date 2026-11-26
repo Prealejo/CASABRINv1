@@ -1,29 +1,77 @@
-import {
-  CircleCheck, CircleMinus, Ban, Warehouse, Store, MapPin, TriangleAlert, Inbox,
-  PackagePlus, Scissors, ArrowLeftRight, SlidersHorizontal, CircleAlert, Info, SwatchBook, Truck,
-} from 'lucide-react'
+import { Warehouse, Store, MapPin, Inbox, CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react'
 
-// Tamaño y grosor únicos para toda la familia de iconos.
+// Tamaño y grosor únicos para toda la familia de iconos (16–20 px, trazo uniforme).
 export const ICONO = { size: 18, strokeWidth: 1.75 }
 export const ICONO_SM = { size: 14, strokeWidth: 2 }
 
-/* ---------- Estado del rollo: color + icono + texto visible ---------- */
-const ESTADOS = {
-  disponible: { cls: 'badge-ok', Icon: CircleCheck },
-  agotado: { cls: 'badge-neutro', Icon: CircleMinus },
-  anulado: { cls: 'badge-error', Icon: Ban },
-}
-export function EstadoBadge({ estado }) {
-  const cfg = ESTADOS[(estado || '').toLowerCase()] || { cls: 'badge-neutro', Icon: null }
-  const { Icon } = cfg
+/* =====================================================================
+   Encabezado de página: título, subtítulo breve y acciones a la derecha.
+   ===================================================================== */
+export function Encabezado({ titulo, subtitulo, children }) {
   return (
-    <span className={`badge ${cfg.cls}`}>
-      {Icon && <Icon {...ICONO_SM} aria-hidden="true" />}{estado}
+    <header className="encabezado">
+      <div className="encabezado-texto">
+        <h1>{titulo}</h1>
+        {subtitulo && <p>{subtitulo}</p>}
+      </div>
+      {children && <div className="encabezado-acciones">{children}</div>}
+    </header>
+  )
+}
+
+/* =====================================================================
+   Indicador numérico (Panel, Inventario, Movimientos).
+   ===================================================================== */
+export function Indicador({ icono: Icono, etiqueta, valor, alerta = false, children, onClick, titulo }) {
+  const Etiqueta = onClick ? 'button' : 'div'
+  return (
+    <Etiqueta
+      type={onClick ? 'button' : undefined}
+      className={`kpi ${alerta ? 'alerta' : ''} ${onClick ? 'clicable' : ''}`}
+      onClick={onClick}
+      title={titulo}
+    >
+      <span className="kpi-cab">
+        <span className="kpi-etiqueta">{etiqueta}</span>
+        {Icono && <Icono className="kpi-icono" size={16} strokeWidth={1.9} aria-hidden="true" />}
+      </span>
+      <span className="kpi-valor">{valor}</span>
+      {children && <span className="kpi-detalle">{children}</span>}
+    </Etiqueta>
+  )
+}
+
+/** Barra compacta de distribución Bodega / Local con sus dos valores. */
+export function DistribucionStock({ bodega, local, formato }) {
+  const b = Number(bodega) || 0
+  const l = Number(local) || 0
+  const tot = b + l
+  const pB = tot > 0 ? (b / tot) * 100 : 0
+  return (
+    <span className="distribucion">
+      <span
+        className="distribucion-barra"
+        role="img"
+        aria-label={`Bodega ${formato(b)}, Local ${formato(l)}`}
+      >
+        {tot > 0 && <><span className="bodega" style={{ width: `${pB}%` }} /><span className="local" style={{ width: `${100 - pB}%` }} /></>}
+      </span>
+      <span className="distribucion-valores">
+        <span><i className="punto bodega" aria-hidden="true" />Bodega <strong>{formato(b)}</strong></span>
+        <span><i className="punto local" aria-hidden="true" />Local <strong>{formato(l)}</strong></span>
+      </span>
     </span>
   )
 }
 
-/* ---------- Ubicación: Bodega / Local ---------- */
+/* =====================================================================
+   Etiquetas de estado: color semántico + texto (sin iconos decorativos).
+   ===================================================================== */
+const ESTADOS = { disponible: 'badge-ok', agotado: 'badge-neutro', anulado: 'badge-error' }
+export function EstadoBadge({ estado }) {
+  return <span className={`badge ${ESTADOS[(estado || '').toLowerCase()] || 'badge-neutro'}`}>{estado}</span>
+}
+
 // Bodega = almacén, Local = tienda; cualquier otra ubicación = marcador.
 export function iconoUbicacion(nombre) {
   const n = (nombre || '').toLowerCase()
@@ -34,73 +82,51 @@ export function iconoUbicacion(nombre) {
 
 export function UbicacionBadge({ nombre }) {
   const n = (nombre || '').toLowerCase()
-  const esBodega = n.includes('bodega')
-  const esLocal = n.includes('local')
-  const Icon = esBodega ? Warehouse : esLocal ? Store : MapPin
-  const cls = esBodega ? 'badge-bodega' : esLocal ? 'badge-local' : 'badge-neutro'
+  const cls = n.includes('bodega') ? 'badge-bodega' : n.includes('local') ? 'badge-local' : 'badge-neutro'
+  const Icon = iconoUbicacion(nombre)
   return (
     <span className={`badge ${cls}`}>
-      <Icon {...ICONO_SM} aria-hidden="true" />{nombre}
+      <Icon size={12} strokeWidth={2} aria-hidden="true" />{nombre}
     </span>
   )
 }
 
-/* ---------- Código de color de la tela ---------- */
-export function CodigoColorBadge({ codigo, grande = false }) {
+export function CodigoColorBadge({ codigo }) {
   if (!codigo) return null
   return (
-    <span className={`badge badge-color ${grande ? 'badge-grande' : ''}`} title="Código de color">
-      <SwatchBook {...ICONO_SM} aria-hidden="true" />
+    <span className="badge badge-color" title="Código de color">
       <span className="sr-only">Código de color </span>
       <span className="mono">{codigo}</span>
     </span>
   )
 }
 
-/* ---------- Proveedor ---------- */
 export function ProveedorTexto({ nombre }) {
   if (!nombre) return null
-  return (
-    <span className="proveedor-texto" title="Proveedor">
-      <Truck {...ICONO_SM} aria-hidden="true" />
-      <span className="sr-only">Proveedor </span>{nombre}
-    </span>
-  )
+  return <span className="proveedor-texto" title="Proveedor"><span className="sr-only">Proveedor </span>{nombre}</span>
 }
 
 export function StockBajoBadge() {
-  return (
-    <span className="badge badge-alerta">
-      <TriangleAlert {...ICONO_SM} aria-hidden="true" />Stock bajo
-    </span>
-  )
+  return <span className="badge badge-alerta">Stock bajo</span>
 }
 
-/* ---------- Tipo de movimiento ---------- */
 const TIPOS = {
-  Ingreso: { Icon: PackagePlus, cls: 'badge-ok' },
-  Salida: { Icon: Scissors, cls: 'badge-marca' },
-  Traslado: { Icon: ArrowLeftRight, cls: 'badge-info' },
-  Ajuste: { Icon: SlidersHorizontal, cls: 'badge-alerta' },
-  Anulacion: { Icon: Ban, cls: 'badge-neutro' },
+  Ingreso: 'badge-ok', Salida: 'badge-marca', Traslado: 'badge-info', Ajuste: 'badge-alerta', Anulacion: 'badge-neutro',
 }
 export function TipoMovimiento({ tipo }) {
-  const cfg = TIPOS[tipo] || { Icon: null, cls: 'badge-neutro' }
-  const { Icon } = cfg
-  return (
-    <span className={`badge ${cfg.cls}`}>
-      {Icon && <Icon {...ICONO_SM} aria-hidden="true" />}{tipo}
-    </span>
-  )
+  return <span className={`badge ${TIPOS[tipo] || 'badge-neutro'}`}>{tipo === 'Anulacion' ? 'Anulación' : tipo}</span>
 }
 
-/* ---------- Estado vacío / carga ---------- */
-export function Vacio({ icon: Icon = Inbox, titulo, children }) {
+/* =====================================================================
+   Estados vacíos, carga y mensajes.
+   ===================================================================== */
+export function Vacio({ icon: Icon = Inbox, titulo, children, accion }) {
   return (
     <div className="vacio" role="status">
-      {Icon && <span className="vacio-icono"><Icon size={22} strokeWidth={1.75} aria-hidden="true" /></span>}
+      {Icon && <Icon className="vacio-icono" size={28} strokeWidth={1.5} aria-hidden="true" />}
       {titulo && <div className="vacio-titulo">{titulo}</div>}
-      {children && <div>{children}</div>}
+      {children && <div className="vacio-texto">{children}</div>}
+      {accion && <div className="vacio-accion">{accion}</div>}
     </div>
   )
 }
@@ -109,16 +135,11 @@ export function Cargando({ children = 'Cargando…' }) {
   return <div className="vacio" role="status" aria-live="polite">{children}</div>
 }
 
-/* ---------- Mensajes ---------- */
 const MSG_ICONO = { error: CircleAlert, ok: CircleCheck, info: Info, alerta: TriangleAlert }
 export function Mensaje({ tipo = 'info', className = '', style, children }) {
   const Icon = MSG_ICONO[tipo]
   return (
-    <div
-      className={`msg msg-${tipo} ${className}`}
-      style={style}
-      role={tipo === 'error' || tipo === 'alerta' ? 'alert' : 'status'}
-    >
+    <div className={`msg msg-${tipo} ${className}`} style={style} role={tipo === 'error' || tipo === 'alerta' ? 'alert' : 'status'}>
       <Icon {...ICONO} aria-hidden="true" />
       <div>{children}</div>
     </div>

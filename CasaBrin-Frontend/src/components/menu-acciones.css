@@ -1,0 +1,21 @@
+/* Menú contextual de tres puntos (MenuAcciones.jsx) */
+.menu-acciones { position: relative; display: inline-flex; }
+.menu-acciones-boton { color: var(--gray-600); }
+.menu-acciones-boton[aria-expanded="true"] { background: var(--gray-100); color: var(--gray-900); }
+.menu-acciones-lista {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 40; min-width: 220px;
+  background: var(--white); border: 1px solid var(--line-strong); border-radius: 10px;
+  box-shadow: var(--shadow-lg); padding: 0.3rem; display: flex; flex-direction: column;
+  animation: menu-aparecer 0.12s ease;
+}
+.menu-acciones-item {
+  display: flex; align-items: center; gap: 0.6rem; width: 100%; text-align: left;
+  font-family: var(--font-sans); font-size: 14px; color: var(--ink);
+  background: none; border: none; border-radius: 6px; padding: 0.55rem 0.65rem; cursor: pointer;
+}
+.menu-acciones-item svg { color: var(--gray-500); flex-shrink: 0; }
+.menu-acciones-item:hover, .menu-acciones-item:focus-visible { background: var(--gray-100); outline: none; }
+.menu-acciones-item.peligro { color: var(--brand-700); }
+.menu-acciones-item.peligro svg { color: var(--brand-600); }
+@keyframes menu-aparecer { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .menu-acciones-lista { animation: none; } }

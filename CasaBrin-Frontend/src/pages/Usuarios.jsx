@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react'
+import { UserPlus, Users, Pencil, LockKeyhole, KeyRound, UserX, UserCheck, Save, TriangleAlert } from 'lucide-react'
 import { api } from '../api/client.js'
 import { useAuth } from '../auth/AuthContext.jsx'
-import {
-  UserPlus, Users, User, IdCard, Mail, Shield, ShieldCheck, Lock, KeyRound, Pencil, UserX,
-  CircleCheck, CircleMinus, CircleDot, Save, TriangleAlert, RotateCcw,
-} from 'lucide-react'
 import Campo from '../components/Campo.jsx'
 import ContrasenaInput from '../components/ContrasenaInput.jsx'
 import FuerzaContrasena from '../components/FuerzaContrasena.jsx'
 import Modal from '../components/Modal.jsx'
+import MenuAcciones from '../components/MenuAcciones.jsx'
 import CodigoRecuperacionCard from '../components/CodigoRecuperacionCard.jsx'
 import { errorContrasena } from '../lib/contrasena.js'
-import { ICONO, ICONO_SM, Vacio, Cargando, Mensaje } from '../components/ui.jsx'
+import { Encabezado, Vacio, Mensaje } from '../components/ui.jsx'
 import './pages.css'
 
 const ROLES = ['Admin', 'Operador']
@@ -24,18 +22,20 @@ export default function Usuarios() {
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
 
+  // Panel lateral de alta / edición
+  const [panel, setPanel] = useState(false)
   const [modo, setModo] = useState('crear')   // 'crear' | 'editar'
   const [form, setForm] = useState({ ...FORM_VACIO })
   const [editId, setEditId] = useState(null)
+  const [errForm, setErrForm] = useState('')
   const [guardando, setGuardando] = useState(false)
 
   const [passId, setPassId] = useState(null)
   const [pass, setPass] = useState('')
   const [errPass, setErrPass] = useState('')
 
-  // Código de recuperación recién generado (se muestra una sola vez en un modal).
+  // Código de recuperación recién generado (se muestra una sola vez).
   const [codigo, setCodigo] = useState(null)        // { usuario, codigo, nuevo }
-  const [generando, setGenerando] = useState(null)  // id del usuario en proceso
 
   async function cargar() {
     setCargando(true)
@@ -54,33 +54,34 @@ export default function Usuarios() {
     setModo('crear')
     setForm({ ...FORM_VACIO })
     setEditId(null)
-    setError(''); setOk('')
+    setErrForm(''); setError(''); setOk('')
+    setPanel(true)
   }
 
   function editar(u) {
     setModo('editar')
     setEditId(u.idUsuario)
-    setForm({
-      nombreUsuario: u.nombreUsuario,
-      nombreCompleto: u.nombreCompleto,
-      correo: u.correo || '',
-      rol: u.rol,
-      contrasena: '',
-      activo: u.activo,
-    })
-    setError(''); setOk('')
+    setForm({ nombreUsuario: u.nombreUsuario, nombreCompleto: u.nombreCompleto, correo: u.correo || '', rol: u.rol, contrasena: '', activo: u.activo })
+    setErrForm(''); setError(''); setOk('')
+    setPanel(true)
   }
 
-  async function guardar() {
-    setError(''); setOk('')
+  function cerrarPanel() {
+    if (guardando) return
+    setPanel(false)
+  }
+
+  async function guardar(e) {
+    e?.preventDefault()
+    setErrForm('')
     if (modo === 'crear') {
-      if (!form.nombreUsuario.trim() || form.nombreUsuario.trim().length < 3) return setError('El usuario debe tener al menos 3 caracteres.')
-      if (!form.nombreCompleto.trim()) return setError('Escribe el nombre completo.')
-      if (/\s/.test(form.nombreUsuario.trim())) return setError('El usuario no puede llevar espacios.')
+      if (!form.nombreUsuario.trim() || form.nombreUsuario.trim().length < 3) return setErrForm('El usuario debe tener al menos 3 caracteres.')
+      if (!form.nombreCompleto.trim()) return setErrForm('Escribe el nombre completo.')
+      if (/\s/.test(form.nombreUsuario.trim())) return setErrForm('El usuario no puede llevar espacios.')
       const ec = errorContrasena(form.contrasena, form.nombreUsuario)
-      if (ec) return setError(ec)
-    } else {
-      if (!form.nombreCompleto.trim()) return setError('Escribe el nombre completo.')
+      if (ec) return setErrForm(ec)
+    } else if (!form.nombreCompleto.trim()) {
+      return setErrForm('Escribe el nombre completo.')
     }
     setGuardando(true)
     try {
@@ -97,7 +98,7 @@ export default function Usuarios() {
         try {
           const { data } = await api.post(`/usuarios/${creado.idUsuario}/codigo-recuperacion`)
           setCodigo({ usuario: creado.nombreUsuario, codigo: data.codigo, nuevo: true })
-        } catch { /* el admin puede generarlo después con el botón «Código» */ }
+        } catch { /* se puede generar después desde el menú de acciones */ }
       } else {
         await api.put(`/usuarios/${editId}`, {
           nombreCompleto: form.nombreCompleto.trim(),
@@ -107,10 +108,10 @@ export default function Usuarios() {
         })
         setOk('Usuario actualizado.')
       }
+      setPanel(false)
       await cargar()
-      nuevo()
-    } catch (e) {
-      setError(e.message)
+    } catch (err) {
+      setErrForm(err.message)
     } finally {
       setGuardando(false)
     }
@@ -123,6 +124,19 @@ export default function Usuarios() {
     try {
       await api.delete(`/usuarios/${u.idUsuario}`)
       setOk('Usuario desactivado.')
+      await cargar()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  // Reactivar usa la misma edición existente (PUT con activo = true).
+  async function activar(u) {
+    if (!confirm(`¿Activar de nuevo a ${u.nombreCompleto}? Podrá volver a iniciar sesión.`)) return
+    setError(''); setOk('')
+    try {
+      await api.put(`/usuarios/${u.idUsuario}`, { nombreCompleto: u.nombreCompleto, correo: u.correo || null, rol: u.rol, activo: true })
+      setOk('Usuario activado.')
       await cargar()
     } catch (e) {
       setError(e.message)
@@ -145,235 +159,182 @@ export default function Usuarios() {
   }
 
   async function generarCodigo(u) {
-    const reemplaza = u.tieneCodigoRecuperacion
-      ? `\n\nEl código anterior de ${u.nombreUsuario} dejará de funcionar.`
-      : ''
+    const reemplaza = u.tieneCodigoRecuperacion ? `\n\nEl código anterior de ${u.nombreUsuario} dejará de funcionar.` : ''
     if (!confirm(`¿Generar un código de recuperación para ${u.nombreCompleto}?${reemplaza}`)) return
     setError(''); setOk('')
-    setGenerando(u.idUsuario)
     try {
       const { data } = await api.post(`/usuarios/${u.idUsuario}/codigo-recuperacion`)
       setCodigo({ usuario: u.nombreUsuario, codigo: data.codigo, nuevo: false })
       await cargar()
     } catch (e) {
       setError(e.message)
-    } finally {
-      setGenerando(null)
     }
   }
 
-  const yoSinCodigo = usuarios.some((u) => u.idUsuario === user?.idUsuario && !u.tieneCodigoRecuperacion)
   const yo = usuarios.find((u) => u.idUsuario === user?.idUsuario)
-
   const usuarioPass = usuarios.find((u) => u.idUsuario === passId)
 
   return (
     <div>
-      <div className="page-head">
-        <div>
-          <h1>Usuarios</h1>
-          <p>Gestiona quién puede acceder al sistema y con qué rol.</p>
-        </div>
+      <Encabezado titulo="Usuarios" subtitulo="Administración de accesos y permisos">
         <button type="button" className="btn btn-primary" onClick={nuevo}>
-          <UserPlus {...ICONO} aria-hidden="true" />
-          Nuevo usuario
+          <UserPlus size={17} strokeWidth={1.9} aria-hidden="true" />Nuevo usuario
         </button>
-      </div>
+      </Encabezado>
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}
       {ok && <Mensaje tipo="ok">{ok}</Mensaje>}
 
-      {yoSinCodigo && yo && (
+      {yo && !yo.tieneCodigoRecuperacion && (
         <div className="aviso-seguridad">
-          <TriangleAlert {...ICONO} aria-hidden="true" />
+          <TriangleAlert size={18} strokeWidth={1.9} aria-hidden="true" />
           <div>
             <strong>Aún no tienes código de recuperación.</strong>
-            <p>Sin correo, es la única forma de recuperar tu cuenta de administrador si olvidas la contraseña. Genéralo e imprímelo.</p>
+            <p>Sin correo, es la única forma de recuperar tu cuenta de administrador si olvidas la contraseña.</p>
           </div>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => generarCodigo(yo)}>
-            <KeyRound size={14} strokeWidth={2} aria-hidden="true" />Generar mi código
-          </button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => generarCodigo(yo)}>Generar mi código</button>
         </div>
       )}
 
-      <div className="usuarios-grid">
-        {/* -------- Lista -------- */}
-        <div className="card card-flush">
-          {cargando ? (
-            <Cargando>Cargando usuarios…</Cargando>
-          ) : usuarios.length === 0 ? (
-            <Vacio icon={Users}>No hay usuarios.</Vacio>
-          ) : (
-            <div className="tabla-scroll">
-              <table className="tabla tabla-usuarios">
-                <thead>
-                  <tr>
-                    <th>Usuario</th>
-                    <th>Rol</th>
-                    <th>Estado</th>
-                    <th style={{ textAlign: 'right' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usuarios.map((u) => (
+      <div className="panel">
+        {cargando ? (
+          <div className="filas-esqueleto" aria-hidden="true">{[0, 1, 2].map((i) => <span key={i} className="esq esq-linea" />)}</div>
+        ) : usuarios.length === 0 ? (
+          <Vacio icon={Users} titulo="Sin usuarios">No hay usuarios registrados.</Vacio>
+        ) : (
+          <div className="tabla-scroll">
+            <table className="tabla tabla-usuarios-v2">
+              <thead>
+                <tr>
+                  <th>Nombre completo</th>
+                  <th>Usuario</th>
+                  <th>Correo</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Código de acceso</th>
+                  <th className="num">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => {
+                  const soyYo = u.idUsuario === user?.idUsuario
+                  return (
                     <tr key={u.idUsuario}>
                       <td>
-                        <div className="usuario-celda">
-                          <span>{u.nombreCompleto}</span>
-                          <small className="mono">{u.nombreUsuario}</small>
-                          {u.correo && <small>{u.correo}</small>}
-                          <span className="chips" style={{ marginTop: 4 }}>
-                            {!u.tieneCodigoRecuperacion && (
-                              <span className="badge badge-alerta"><TriangleAlert size={12} strokeWidth={2} aria-hidden="true" />Sin código</span>
-                            )}
-                            {u.debeCambiarContrasena && (
-                              <span className="badge badge-info"><RotateCcw size={12} strokeWidth={2} aria-hidden="true" />Clave temporal</span>
-                            )}
-                          </span>
-                        </div>
+                        <span className="nombre-usuario">{u.nombreCompleto}</span>
+                        {soyYo && <span className="tenue"> (tú)</span>}
+                        {u.debeCambiarContrasena && <span className="badge badge-info badge-inline">Clave temporal</span>}
                       </td>
+                      <td className="codigo">{u.nombreUsuario}</td>
+                      <td className={u.correo ? '' : 'tenue'}>{u.correo || '—'}</td>
+                      <td><span className={`badge ${u.rol === 'Admin' ? 'badge-marca' : 'badge-neutro'}`}>{u.rol === 'Admin' ? 'Administrador' : 'Operador'}</span></td>
+                      <td><span className={`badge ${u.activo ? 'badge-ok' : 'badge-neutro'}`}>{u.activo ? 'Activo' : 'Inactivo'}</span></td>
                       <td>
-                        <span className={`badge ${u.rol === 'Admin' ? 'badge-marca' : 'badge-neutro'}`}>
-                          {u.rol === 'Admin'
-                            ? <ShieldCheck {...ICONO_SM} aria-hidden="true" />
-                            : <User {...ICONO_SM} aria-hidden="true" />}
-                          {u.rol}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={u.activo ? 'badge badge-ok' : 'badge badge-neutro'}>
-                          {u.activo
-                            ? <CircleCheck {...ICONO_SM} aria-hidden="true" />
-                            : <CircleMinus {...ICONO_SM} aria-hidden="true" />}
-                          {u.activo ? 'Activo' : 'Inactivo'}
-                        </span>
+                        {u.tieneCodigoRecuperacion
+                          ? <span className="tenue">Asignado</span>
+                          : <span className="badge badge-alerta">Sin código</span>}
                       </td>
                       <td>
                         <div className="acciones-tabla">
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => editar(u)} aria-label={`Editar a ${u.nombreCompleto}`}>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => editar(u)} aria-label={`Editar a ${u.nombreCompleto}`}>
                             <Pencil size={14} strokeWidth={2} aria-hidden="true" />Editar
                           </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => { setPassId(u.idUsuario); setPass(''); setErrPass(''); setError(''); setOk('') }}
-                            aria-label={`Asignar contraseña temporal a ${u.nombreCompleto}`}
-                          >
-                            <Lock size={14} strokeWidth={2} aria-hidden="true" />Clave
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => generarCodigo(u)}
-                            disabled={generando === u.idUsuario}
-                            aria-label={`Generar código de recuperación de ${u.nombreCompleto}`}
-                          >
-                            <KeyRound size={14} strokeWidth={2} aria-hidden="true" />{generando === u.idUsuario ? '…' : 'Código'}
-                          </button>
-                          {u.activo && u.idUsuario !== user?.idUsuario && (
-                            <button type="button" className="btn btn-danger-ghost btn-sm" onClick={() => desactivar(u)} aria-label={`Dar de baja a ${u.nombreCompleto}`}>
-                              <UserX size={14} strokeWidth={2} aria-hidden="true" />Baja
-                            </button>
-                          )}
+                          <MenuAcciones
+                            etiqueta={`Más acciones de ${u.nombreCompleto}`}
+                            items={[
+                              { texto: 'Cambiar contraseña', icono: LockKeyhole, onClick: () => { setPassId(u.idUsuario); setPass(''); setErrPass(''); setError(''); setOk('') } },
+                              { texto: u.tieneCodigoRecuperacion ? 'Regenerar código de acceso' : 'Generar código de acceso', icono: KeyRound, onClick: () => generarCodigo(u) },
+                              !soyYo && u.activo && { texto: 'Dar de baja', icono: UserX, peligro: true, onClick: () => desactivar(u) },
+                              !soyYo && !u.activo && { texto: 'Activar', icono: UserCheck, onClick: () => activar(u) },
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* -------- Formulario -------- */}
-        <div className="card">
-          <div className="seccion-titulo" style={{ marginBottom: '0.9rem' }}>
-            <span className="titulo-icono">
-              {modo === 'crear' ? <UserPlus {...ICONO} aria-hidden="true" /> : <Pencil {...ICONO} aria-hidden="true" />}
-              {modo === 'crear' ? 'Nuevo usuario' : `Editar: ${form.nombreUsuario}`}
-            </span>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
+        )}
+      </div>
 
-          <Campo label="Usuario" icon={User} requerido>
-            <input
-              value={form.nombreUsuario}
-              onChange={(e) => setForm({ ...form, nombreUsuario: e.target.value })}
-              disabled={modo === 'editar'}
-              placeholder="Ej. jperez"
-              autoComplete="off"
-            />
+      {/* -------- Panel lateral: alta / edición -------- */}
+      <Modal
+        abierto={panel}
+        lateral
+        titulo={modo === 'crear' ? 'Nuevo usuario' : `Editar usuario · ${form.nombreUsuario}`}
+        onCerrar={cerrarPanel}
+        pie={(
+          <>
+            <button type="button" className="btn btn-secondary" onClick={cerrarPanel} disabled={guardando}>Cancelar</button>
+            <button type="submit" form="form-usuario" className="btn btn-primary" disabled={guardando}>
+              <Save size={16} strokeWidth={1.9} aria-hidden="true" />
+              {guardando ? 'Guardando…' : (modo === 'crear' ? 'Crear usuario' : 'Guardar cambios')}
+            </button>
+          </>
+        )}
+      >
+        <form id="form-usuario" onSubmit={guardar} noValidate>
+          {errForm && <Mensaje tipo="error">{errForm}</Mensaje>}
+          <Campo label="Usuario" requerido ayuda={modo === 'editar' ? 'El nombre de usuario no se puede cambiar.' : undefined}>
+            <input value={form.nombreUsuario} onChange={(e) => setForm({ ...form, nombreUsuario: e.target.value })} disabled={modo === 'editar'} placeholder="Ej. jperez" autoComplete="off" />
           </Campo>
-          <Campo label="Nombre completo" icon={IdCard} requerido>
+          <Campo label="Nombre completo" requerido>
             <input value={form.nombreCompleto} onChange={(e) => setForm({ ...form, nombreCompleto: e.target.value })} placeholder="Ej. Juan Pérez" />
           </Campo>
-          <Campo label="Correo" icon={Mail}>
-            <input type="email" value={form.correo} onChange={(e) => setForm({ ...form, correo: e.target.value })} placeholder="opcional" autoComplete="off" />
+          <Campo label="Correo">
+            <input type="email" value={form.correo} onChange={(e) => setForm({ ...form, correo: e.target.value })} placeholder="Opcional" autoComplete="off" />
           </Campo>
-          <Campo label="Rol" icon={Shield} requerido>
+          <Campo label="Rol" requerido>
             <select value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })}>
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              {ROLES.map((r) => <option key={r} value={r}>{r === 'Admin' ? 'Administrador' : 'Operador'}</option>)}
             </select>
           </Campo>
-          {modo === 'crear' && (
+          {modo === 'crear' ? (
             <>
-              <Campo label="Contraseña" icon={Lock} requerido style={{ marginBottom: '0.5rem' }}>
+              <Campo label="Contraseña" requerido>
                 <ContrasenaInput value={form.contrasena} onChange={(e) => setForm({ ...form, contrasena: e.target.value })} autoComplete="new-password" />
               </Campo>
               <FuerzaContrasena clave={form.contrasena} usuario={form.nombreUsuario} />
             </>
-          )}
-          {modo === 'editar' && (
-            <Campo label="Estado" icon={CircleDot}>
-              <select value={form.activo ? '1' : '0'} onChange={(e) => setForm({ ...form, activo: e.target.value === '1' })}>
+          ) : (
+            <Campo label="Estado">
+              <select value={form.activo ? '1' : '0'} onChange={(e) => setForm({ ...form, activo: e.target.value === '1' })} disabled={editId === user?.idUsuario}>
                 <option value="1">Activo</option>
                 <option value="0">Inactivo</option>
               </select>
             </Campo>
           )}
+        </form>
+      </Modal>
 
-          <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.25rem' }}>
-            <button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={guardar} disabled={guardando}>
-              <Save size={16} strokeWidth={1.75} aria-hidden="true" />
-              {guardando ? 'Guardando…' : (modo === 'crear' ? 'Crear usuario' : 'Guardar cambios')}
-            </button>
-            {modo === 'editar' && <button type="button" className="btn btn-ghost" onClick={nuevo}>Cancelar</button>}
-          </div>
-        </div>
-      </div>
-
-      {/* -------- Modal: contraseña temporal -------- */}
+      {/* -------- Contraseña temporal -------- */}
       <Modal
         abierto={!!passId}
-        titulo={`Contraseña temporal${usuarioPass ? `: ${usuarioPass.nombreUsuario}` : ''}`}
-        icono={Lock}
+        titulo={`Cambiar contraseña${usuarioPass ? ` · ${usuarioPass.nombreUsuario}` : ''}`}
         onCerrar={() => { setPassId(null); setPass('') }}
         ancho={460}
         pie={(
           <>
-            <button type="button" className="btn btn-ghost" onClick={() => { setPassId(null); setPass('') }}>Cancelar</button>
-            <button type="submit" form="form-clave" className="btn btn-primary">
-              <Save size={16} strokeWidth={1.75} aria-hidden="true" />Asignar contraseña
-            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => { setPassId(null); setPass('') }}>Cancelar</button>
+            <button type="submit" form="form-clave" className="btn btn-primary">Asignar contraseña</button>
           </>
         )}
       >
         <form id="form-clave" onSubmit={(e) => { e.preventDefault(); guardarPass() }} noValidate>
-          <p className="texto-ayuda">
-            Úsalo cuando el usuario perdió su código de recuperación. Al ingresar con esta contraseña,
-            el sistema le pedirá crear una propia.
-          </p>
-          <Campo label="Contraseña temporal" icon={Lock} requerido error={errPass} style={{ marginBottom: '0.5rem' }}>
+          <p className="texto-ayuda">Se asigna como contraseña temporal: al ingresar, el usuario deberá crear una propia.</p>
+          <Campo label="Contraseña temporal" requerido error={errPass}>
             <ContrasenaInput value={pass} onChange={(e) => { setPass(e.target.value); setErrPass('') }} autoComplete="new-password" />
           </Campo>
           <FuerzaContrasena clave={pass} usuario={usuarioPass?.nombreUsuario} />
         </form>
       </Modal>
 
-      {/* -------- Modal: código de recuperación generado -------- */}
+      {/* -------- Código de acceso generado -------- */}
       <Modal
         abierto={!!codigo}
-        titulo="Código de recuperación"
-        icono={KeyRound}
+        titulo="Código de acceso"
         onCerrar={() => setCodigo(null)}
         ancho={460}
         pie={<button type="button" className="btn btn-primary" onClick={() => setCodigo(null)}>Listo, ya lo guardé</button>}
@@ -381,9 +342,7 @@ export default function Usuarios() {
         {codigo && (
           <>
             <p className="texto-ayuda">
-              {codigo.nuevo ? 'Usuario creado. ' : ''}
-              Entrega este código a <strong>{codigo.usuario}</strong> (impreso o anotado). Con él podrá crear
-              una nueva contraseña desde «¿Olvidaste tu contraseña?» sin necesidad de correo.
+              {codigo.nuevo ? 'Usuario creado. ' : ''}Entrega este código a <strong>{codigo.usuario}</strong>. Con él podrá crear una nueva contraseña desde «¿Olvidaste tu contraseña?».
             </p>
             <CodigoRecuperacionCard codigo={codigo.codigo} usuario={codigo.usuario} />
           </>
