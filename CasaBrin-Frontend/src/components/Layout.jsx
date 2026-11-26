@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import useLectorGlobal from '../lib/useLectorGlobal.js'
 import { useState } from 'react'
 import {
   LayoutDashboard, PackagePlus, Barcode, Layers, ScanBarcode, History, Users, LogOut, Menu, X,
@@ -33,6 +34,11 @@ export default function Layout() {
   const { user, esAdmin, logout } = useAuth()
   const navigate = useNavigate()
   const [abierto, setAbierto] = useState(false)
+
+  // Pistola lectora en cualquier pantalla: lleva a «Escanear y cortar» con el código leído.
+  useLectorGlobal((codigo) => {
+    navigate(`/escanear?codigo=${encodeURIComponent(codigo.toUpperCase())}`)
+  })
 
   function salir() {
     logout()

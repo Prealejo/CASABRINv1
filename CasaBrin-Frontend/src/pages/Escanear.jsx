@@ -54,15 +54,17 @@ export default function Escanear() {
     }
   }
 
-  // Si se llega desde Inventario (?codigo=CB…), se carga el rollo directamente.
+  // Código recibido por la URL: desde Inventario (?codigo=CB…) o desde la pistola
+  // lectora usada en cualquier otra pantalla. Se muestra en el campo y se busca.
+  const [codigoExterno, setCodigoExterno] = useState({ codigo: '', n: 0 })
+  const codigoUrl = searchParams.get('codigo')
   useEffect(() => {
-    const cod = searchParams.get('codigo')
-    if (cod) {
-      buscar(cod)
-      setSearchParams({}, { replace: true })
-    }
+    if (!codigoUrl) return
+    setCodigoExterno((c) => ({ codigo: codigoUrl, n: c.n + 1 }))
+    buscar(codigoUrl)
+    setSearchParams({}, { replace: true })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [codigoUrl])
 
   const metrosNum = parseFloat(metros) || 0
   const excede = rollo && metrosNum > Number(rollo.metrosActuales)
@@ -96,7 +98,7 @@ export default function Escanear() {
       <Encabezado titulo="Escanear y cortar" subtitulo="Consulta un rollo y registra los metros vendidos" />
 
       <section className="panel panel-cuerpo escaner-panel">
-        <BarcodeInput onScan={buscar} focoSenal={focoSenal} />
+        <BarcodeInput onScan={buscar} focoSenal={focoSenal} codigoExterno={codigoExterno} />
       </section>
 
       {error && <Mensaje tipo="error" style={{ marginTop: '1rem' }}>{error}</Mensaje>}
@@ -156,7 +158,6 @@ export default function Escanear() {
                   onChange={(e) => setMetros(e.target.value)}
                   placeholder="Ej. 3.5"
                   disabled={rollo.estado !== 'Disponible'}
-                  autoFocus
                   className="input-corte"
                 />
               </Campo>
