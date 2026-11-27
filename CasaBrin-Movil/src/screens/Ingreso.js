@@ -6,7 +6,7 @@ import {
   PackageCheck, Tag, Printer, ArrowLeftRight, ClipboardList, SwatchBook,
 } from 'lucide-react-native'
 import { api } from '../api/client'
-import { fmtMetros } from '../lib/format'
+import { fmtMetros, esMedioMetro } from '../lib/format'
 import { imprimirEtiquetas, subtituloEtiqueta } from '../lib/etiquetas'
 import Pantalla from '../components/Pantalla'
 import ProveedorCampo from '../components/Proveedor'
@@ -77,7 +77,9 @@ export default function Ingreso() {
       else if (sm < 1) e.stockMinimo = 'El stock mínimo debe ser 1 o mayor.'
     }
     lineas.forEach((l, i) => {
-      if (!(parseFloat(String(l.metros).replace(',', '.')) > 0)) el[`${i}-metros`] = 'Metros > 0'
+      const m = parseFloat(String(l.metros).replace(',', '.'))
+      if (!(m > 0)) el[`${i}-metros`] = 'Metros > 0'
+      else if (!esMedioMetro(m)) el[`${i}-metros`] = 'De 0,5 en 0,5 m'
       if (!(parseInt(l.cantidad, 10) >= 1)) el[`${i}-cantidad`] = 'Mínimo 1'
       if (!l.idUbicacion) el[`${i}-idUbicacion`] = 'Elige ubicación'
     })

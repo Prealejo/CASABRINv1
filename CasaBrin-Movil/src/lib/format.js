@@ -77,3 +77,8 @@ export function badgeUbicacion(nombre) {
   if (n.includes('local')) return 'badge badge-local'
   return 'badge'
 }
+
+/** true si los metros van de medio en medio metro (0,5 · 1 · 1,5 …). */
+export function esMedioMetro(m) {
+  return Number.isFinite(m) && Math.abs(m * 2 - Math.round(m * 2)) < 1e-9
+}

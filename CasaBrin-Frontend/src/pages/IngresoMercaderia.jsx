@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client.js'
 import BarcodeLabel from '../components/BarcodeLabel.jsx'
 import { Plus, Trash2, PackageCheck, Printer, ArrowLeftRight } from 'lucide-react'
-import { fmtMetros } from '../lib/format.js'
+import { esMedioMetro, fmtMetros } from '../lib/format.js'
 import Campo from '../components/Campo.jsx'
 import TelaPicker from '../components/TelaPicker.jsx'
 import ProveedorCampo from '../components/ProveedorCampo.jsx'
@@ -104,6 +104,7 @@ export default function IngresoMercaderia() {
     if (!lineas.length) errs.lineas = 'Agrega al menos una línea de rollos.'
     lineas.forEach((l, i) => {
       if (!(parseFloat(l.metros) > 0)) errsLinea[`${i}-metros`] = 'Metros > 0'
+      else if (!esMedioMetro(parseFloat(l.metros))) errsLinea[`${i}-metros`] = 'De 0,5 en 0,5 m'
       if (!(parseInt(l.cantidad, 10) >= 1)) errsLinea[`${i}-cantidad`] = 'Mínimo 1'
       if (!l.idUbicacion) errsLinea[`${i}-idUbicacion`] = 'Elige ubicación'
     })
@@ -276,7 +277,7 @@ export default function IngresoMercaderia() {
                 <tr key={i}>
                   <td data-label="Metros por rollo">
                     <input
-                      type="number" min="0.01" step="0.01" value={l.metros} placeholder="Ej. 40"
+                      type="number" min="0.5" step="0.5" value={l.metros} placeholder="Ej. 40"
                       onChange={(e) => setLinea(i, 'metros', e.target.value)}
                       aria-label={`Metros por rollo, línea ${i + 1}`}
                       aria-invalid={errLinea(i, 'metros') ? true : undefined}

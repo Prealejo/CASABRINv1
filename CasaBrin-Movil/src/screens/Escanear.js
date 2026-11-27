@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Cylinder, Barcode, MapPin, Ruler, Scissors, StickyNote, Route, SwatchBook } from 'lucide-react-native'
 import { api } from '../api/client'
-import { fmtMetros } from '../lib/format'
+import { fmtMetros, esMedioMetro } from '../lib/format'
 import Pantalla from '../components/Pantalla'
 import { CampoCodigo } from '../components/Escaner'
 import { Campo, Entrada } from '../components/campos'
@@ -60,7 +60,9 @@ export default function Escanear() {
   const metrosNum = parseFloat(String(metros).replace(',', '.')) || 0
   const disponibles = Number(rollo?.metrosActuales || 0)
   const excede = rollo && metrosNum > disponibles
-  const puedeCortar = rollo && rollo.estado === 'Disponible' && metrosNum > 0 && !excede
+  // Se corta de medio en medio metro; «Todo» se permite aunque el sobrante no sea exacto.
+  const fueraDeMedida = rollo && metrosNum > 0 && !esMedioMetro(metrosNum) && metrosNum !== disponibles
+  const puedeCortar = rollo && rollo.estado === 'Disponible' && metrosNum > 0 && !excede && !fueraDeMedida
 
   async function cortar() {
     if (!puedeCortar || cortando) return
@@ -133,7 +135,7 @@ export default function Escanear() {
 
           <Seccion titulo="Cortar metros" icono={Scissors}>
             <Tarjeta>
-              <Campo etiqueta="Metros a cortar" error={excede ? `Solo hay ${fmtMetros(disponibles)} disponibles.` : undefined}>
+              <Campo etiqueta="Metros a cortar" error={excede ? `Solo hay ${fmtMetros(disponibles)} disponibles.` : fueraDeMedida ? 'Usa medios metros: 0,5 · 1 · 1,5 · 2…' : undefined}>
                 <Entrada
                   icono={Ruler}
                   value={String(metros)}
@@ -141,7 +143,7 @@ export default function Escanear() {
                   keyboardType="decimal-pad"
                   placeholder="Ej. 3.5"
                   editable={rollo.estado === 'Disponible'}
-                  error={excede}
+                  error={excede || fueraDeMedida}
                 />
               </Campo>
               {rollo.estado === 'Disponible' && (
@@ -167,7 +169,7 @@ export default function Escanear() {
               <Campo etiqueta="Observación (opcional)">
                 <Entrada icono={StickyNote} value={observacion} onChangeText={setObservacion} placeholder="Ej. Venta mostrador" editable={rollo.estado === 'Disponible'} />
               </Campo>
-              {metrosNum > 0 && !excede && (
+              {metrosNum > 0 && !excede && !fueraDeMedida && (
                 <View style={{ padding: 10, borderRadius: R.sm, borderWidth: 1, borderStyle: 'dashed', borderColor: C.gray300, backgroundColor: C.gray50, marginBottom: S.md }} accessibilityLiveRegion="polite">
                   <Text style={{ textAlign: 'center', color: C.ink }}>
                     {fmtMetros(disponibles)} − <Text style={{ fontWeight: '800' }}>{fmtMetros(metrosNum)}</Text> = quedan <Text style={{ fontWeight: '800' }}>{fmtMetros(disponibles - metrosNum)}</Text>

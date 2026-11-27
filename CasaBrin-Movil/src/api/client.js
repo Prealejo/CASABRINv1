@@ -2,7 +2,8 @@ import axios from 'axios'
 import * as SecureStore from 'expo-secure-store'
 
 // URL del backend: la que el usuario configuró en la app, o la de .env (EXPO_PUBLIC_API_URL).
-const URL_POR_DEFECTO = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.100.95:5080/api'
+// Por defecto, el servidor publicado (funciona desde cualquier red con internet).
+const URL_POR_DEFECTO = process.env.EXPO_PUBLIC_API_URL || 'https://casabrin.runasp.net/api'
 const CLAVE_URL = 'cb_api_url'
 const CLAVE_TOKEN = 'cb_token'
 
@@ -20,7 +21,8 @@ export function getApiUrl() { return api.defaults.baseURL }
 export function normalizarUrl(valor) {
   let u = (valor || '').trim().replace(/\/+$/, '')
   if (!u) return URL_POR_DEFECTO
-  if (!/^https?:\/\//i.test(u)) u = `http://${u}`
+  // Dominio sin protocolo → https; IP local (192.168…, localhost) → http
+  if (!/^https?:\/\//i.test(u)) u = /^(\d{1,3}(\.\d{1,3}){3}|localhost)(:\d+)?(\/|$)/i.test(u) ? `http://${u}` : `https://${u}`
   if (!/\/api$/i.test(u)) u = `${u}/api`
   return u
 }
@@ -40,10 +42,10 @@ export async function guardarApiUrl(valor) {
   return u
 }
 
-/** Prueba si el backend responde en la URL indicada (endpoint raíz público). */
+/** Prueba si el backend responde en la URL indicada (endpoint público /api/salud). */
 export async function probarConexion(valor) {
   const u = normalizarUrl(valor).replace(/\/api$/i, '')
-  const r = await axios.get(`${u}/`, { timeout: 6000 })
+  const r = await axios.get(`${u}/api/salud`, { timeout: 6000 })
   return r.status === 200
 }
 

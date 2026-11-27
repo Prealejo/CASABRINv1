@@ -129,7 +129,21 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Endpoint de salud simple.
-app.MapGet("/", () => Results.Ok(new { servicio = "Casa Brin API", estado = "ok" }));
+app.MapGet("/api/salud", () => Results.Ok(new { servicio = "Casa Brin API", estado = "ok" }));
+
+// En el hosting la web (React compilada) se publica en wwwroot y la sirve esta misma
+// aplicacion: un solo sitio para web + API. Las rutas que no son de la API
+// (/inventario, /escanear, ...) devuelven index.html para que las resuelva React.
+if (File.Exists(Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html")))
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+    app.MapFallbackToFile("index.html");
+}
+else
+{
+    app.MapGet("/", () => Results.Ok(new { servicio = "Casa Brin API", estado = "ok" }));
+}
 
 app.Run();
 

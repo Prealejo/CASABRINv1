@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client.js'
 import BarcodeInput from '../components/BarcodeInput.jsx'
 import { Barcode, Scissors, History } from 'lucide-react'
-import { fmtMetros } from '../lib/format.js'
+import { fmtMetros, esMedioMetro } from '../lib/format.js'
 import Campo from '../components/Campo.jsx'
 import { Encabezado, EstadoBadge, UbicacionBadge, CodigoColorBadge, Mensaje, Vacio, Cargando } from '../components/ui.jsx'
 import './pages.css'
@@ -68,7 +68,9 @@ export default function Escanear() {
 
   const metrosNum = parseFloat(metros) || 0
   const excede = rollo && metrosNum > Number(rollo.metrosActuales)
-  const puedeCortar = rollo && rollo.estado === 'Disponible' && metrosNum > 0 && !excede
+  // Se corta de medio en medio metro; «Todo el rollo» se permite aunque el sobrante no sea exacto.
+  const fueraDeMedida = rollo && metrosNum > 0 && !esMedioMetro(metrosNum) && metrosNum !== Number(rollo.metrosActuales)
+  const puedeCortar = rollo && rollo.estado === 'Disponible' && metrosNum > 0 && !excede && !fueraDeMedida
 
   async function cortar() {
     if (!puedeCortar) return
@@ -152,9 +154,9 @@ export default function Escanear() {
           <section className="panel" aria-label="Registrar corte">
             <div className="panel-cab"><h2>Registrar corte</h2></div>
             <div className="panel-cuerpo">
-              <Campo label="Metros a cortar" error={excede ? `Solo hay ${fmtMetros(rollo.metrosActuales)} disponibles.` : undefined}>
+              <Campo label="Metros a cortar" error={excede ? `Solo hay ${fmtMetros(rollo.metrosActuales)} disponibles.` : fueraDeMedida ? 'Usa medios metros: 0,5 · 1 · 1,5 · 2…' : undefined}>
                 <input
-                  type="number" min="0.01" step="0.01" value={metros}
+                  type="number" min="0.5" step="0.5" value={metros}
                   onChange={(e) => setMetros(e.target.value)}
                   placeholder="Ej. 3.5"
                   disabled={rollo.estado !== 'Disponible'}

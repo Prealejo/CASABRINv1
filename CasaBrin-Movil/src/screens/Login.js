@@ -137,7 +137,7 @@ export default function Login() {
         <Text style={[T.chico, { marginBottom: S.lg, lineHeight: 20 }]}>
           Escribe la IP de la computadora donde corre el backend. El celular y la computadora deben estar en la misma red WiFi.
         </Text>
-        <Campo etiqueta="Dirección del backend" ayuda="Ejemplo: 192.168.100.95:5080 (se completa a http://…/api)">
+        <Campo etiqueta="Dirección del backend" ayuda="Ejemplo: casabrin.runasp.net (en línea) o 192.168.100.95:5080 (red local)">
           <Entrada icono={Server} value={url} onChangeText={setUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
         </Campo>
         {estadoSrv && <Mensaje tipo={estadoSrv.tipo}>{estadoSrv.texto}</Mensaje>}
