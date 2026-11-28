@@ -1,4 +1,4 @@
-import { Warehouse, Store, MapPin, Inbox, CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react'
+import { Warehouse, Store, MapPin, Inbox, CircleAlert, CircleCheck, Info, TriangleAlert, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Tamaño y grosor únicos para toda la familia de iconos (16–20 px, trazo uniforme).
 export const ICONO = { size: 18, strokeWidth: 1.75 }
@@ -143,5 +143,26 @@ export function Mensaje({ tipo = 'info', className = '', style, children }) {
       <Icon {...ICONO} aria-hidden="true" />
       <div>{children}</div>
     </div>
+  )
+}
+
+/** Paginación «Anterior / Siguiente» con el total de registros. */
+export function Paginacion({ pagina, total, porPagina, onCambiar, unidad = 'registros', className = '' }) {
+  const paginas = Math.max(1, Math.ceil(total / porPagina))
+  if (total <= 0) return null
+  const desde = (pagina - 1) * porPagina + 1
+  const hasta = Math.min(pagina * porPagina, total)
+  return (
+    <nav className={`paginacion no-print ${className}`} aria-label="Paginación">
+      <span className="paginacion-info">{desde}–{hasta} de {total.toLocaleString('es-EC')} {unidad} · página {pagina} de {paginas}</span>
+      <div className="paginacion-botones">
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => onCambiar(pagina - 1)} disabled={pagina <= 1}>
+          <ChevronLeft size={16} strokeWidth={1.9} aria-hidden="true" />Anterior
+        </button>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => onCambiar(pagina + 1)} disabled={pagina >= paginas}>
+          Siguiente<ChevronRight size={16} strokeWidth={1.9} aria-hidden="true" />
+        </button>
+      </div>
+    </nav>
   )
 }

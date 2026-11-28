@@ -5,7 +5,7 @@ import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
 import { File, Paths } from 'expo-file-system'
 import {
-  TriangleAlert, CircleCheck, History, List, Filter, RotateCcw, SearchX, ChevronLeft, ChevronRight, Barcode,
+  TriangleAlert, CircleCheck, History, List, Filter, RotateCcw, SearchX, Barcode,
   Layers, Download, Printer, X, Route, Ruler, Scissors, Calendar, Cylinder, Camera,
 } from 'lucide-react-native'
 import { api } from '../api/client'
@@ -15,12 +15,12 @@ import { EscanerCamara } from '../components/Escaner'
 import { Campo, Entrada, Selector, SelectorFecha } from '../components/campos'
 import {
   Boton, Cargando, CodigoColorBadge, EstadoBadge, Mensaje, ProveedorTexto, Seccion, Tarjeta, TipoMovimiento,
-  UbicacionBadge, Vacio,
+  UbicacionBadge, Vacio, Paginacion,
 } from '../components/ui'
 import { C, R, S, T } from '../theme'
 
 const TIPOS = ['Ingreso', 'Traslado', 'Salida', 'Ajuste', 'Anulacion']
-const PAGE = 20
+const PAGE = 7   // movimientos por página
 const VACIOS = { tipo: '', idTela: '', rollo: '', desde: '', hasta: '' }
 const csvCelda = (v) => { const s = v == null ? '' : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s }
 const num = (v) => (Number(v) || 0).toLocaleString('es-EC', { maximumFractionDigits: 2, useGrouping: false })
@@ -97,7 +97,6 @@ export default function Reportes() {
   function limpiar() { setFiltros(VACIOS); setAplicados(VACIOS); setPage(1); router.setParams({ rollo: undefined, tela: undefined, tipo: undefined }) }
   function verRollo(codigo) { const f = { ...VACIOS, rollo: codigo }; setFiltros(f); aplicar(f) }
 
-  const totalPaginas = Math.max(1, Math.ceil(movs.total / PAGE))
   const porTipo = useMemo(() => Object.fromEntries((resumen?.porTipo || []).map((r) => [r.tipo, r])), [resumen])
   const hayFiltros = Object.values(aplicados).some(Boolean)
   const nombreTela = telas.find((t) => String(t.idTela) === String(aplicados.idTela))
@@ -294,15 +293,7 @@ export default function Reportes() {
           ))}
         </Tarjeta>
 
-        {movs.total > 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: S.md }}>
-            <Text style={T.chico}>{fmtNum(movs.total)} mov. · pág. {page}/{totalPaginas}</Text>
-            <View style={{ flexDirection: 'row', gap: S.sm }}>
-              <Boton chico variante="secundario" icono={ChevronLeft} onPress={() => setPage((p) => p - 1)} deshabilitado={page <= 1} accessibilityLabel="Página anterior" />
-              <Boton chico variante="secundario" icono={ChevronRight} onPress={() => setPage((p) => p + 1)} deshabilitado={page >= totalPaginas} accessibilityLabel="Página siguiente" />
-            </View>
-          </View>
-        )}
+        <Paginacion pagina={page} total={movs.total} porPagina={PAGE} onCambiar={setPage} unidad="movimientos" />
       </Seccion>
 
       <EscanerCamara visible={camara} onCerrar={() => setCamara(false)} onCodigo={(c) => { setCamara(false); verRollo(c) }} />

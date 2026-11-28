@@ -2,7 +2,7 @@ import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from '
 import { useEffect, useState } from 'react'
 import {
   CircleCheck, CircleMinus, Ban, Warehouse, Store, MapPin, TriangleAlert, PackagePlus, Scissors,
-  ArrowLeftRight, SlidersHorizontal, CircleAlert, Info, SwatchBook, Truck, Inbox, PackageX,
+  ArrowLeftRight, SlidersHorizontal, CircleAlert, Info, SwatchBook, Truck, Inbox, PackageX, ChevronLeft, ChevronRight,
 } from 'lucide-react-native'
 import { C, R, S, CONTROL_H, T } from '../theme'
 
@@ -234,3 +234,23 @@ export const st = StyleSheet.create({
     paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.gray100,
   },
 })
+
+/** Paginación «‹ ›» con el total de registros. */
+export function Paginacion({ pagina, total, porPagina, onCambiar, unidad = 'registros' }) {
+  const paginas = Math.max(1, Math.ceil(total / porPagina))
+  if (total <= 0) return null
+  const desde = (pagina - 1) * porPagina + 1
+  const hasta = Math.min(pagina * porPagina, total)
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: S.md, gap: S.sm }}>
+      <View style={{ flexShrink: 1 }}>
+        <Text style={T.chico}>{desde}–{hasta} de {total} {unidad}</Text>
+        <Text style={T.mini}>Página {pagina} de {paginas}</Text>
+      </View>
+      <View style={{ flexDirection: 'row', gap: S.sm }}>
+        <Boton chico variante="secundario" icono={ChevronLeft} onPress={() => onCambiar(pagina - 1)} deshabilitado={pagina <= 1} accessibilityLabel="Página anterior" />
+        <Boton chico variante="secundario" icono={ChevronRight} onPress={() => onCambiar(pagina + 1)} deshabilitado={pagina >= paginas} accessibilityLabel="Página siguiente" />
+      </View>
+    </View>
+  )
+}

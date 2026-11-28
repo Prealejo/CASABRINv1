@@ -4,15 +4,20 @@ import { Layers, Cylinder, Ruler, TriangleAlert, PackagePlus, History } from 'lu
 import { api } from '../api/client.js'
 import { fmtMetros, fmtNum, fmtFecha } from '../lib/format.js'
 import {
-  ICONO, Encabezado, Indicador, DistribucionStock, TipoMovimiento, Vacio, Mensaje,
+  ICONO, Encabezado, Indicador, DistribucionStock, TipoMovimiento, Vacio, Mensaje, Paginacion,
 } from '../components/ui.jsx'
 import './pages.css'
+
+const POR_PAGINA = 7
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(true)
+  const [movs, setMovs] = useState({ items: [], total: 0 })
+  const [pagina, setPagina] = useState(1)
+  const [cargandoMovs, setCargandoMovs] = useState(true)
 
   useEffect(() => {
     let vivo = true
@@ -29,7 +34,18 @@ export default function Dashboard() {
     return () => { vivo = false }
   }, [])
 
-  const movimientos = data?.ultimosMovimientos || []
+  // Movimientos paginados de 7 en 7 (los más recientes primero).
+  useEffect(() => {
+    let vivo = true
+    setCargandoMovs(true)
+    api.get('/reportes/movimientos', { params: { page: pagina, pageSize: POR_PAGINA } })
+      .then(({ data }) => { if (vivo) setMovs(data) })
+      .catch((e) => { if (vivo) setError(e.message) })
+      .finally(() => { if (vivo) setCargandoMovs(false) })
+    return () => { vivo = false }
+  }, [pagina])
+
+  const movimientos = movs.items
 
   return (
     <div>
@@ -73,7 +89,7 @@ export default function Dashboard() {
           </Link>
         </div>
         <div className="panel">
-          {cargando ? (
+          {cargandoMovs && !movimientos.length ? (
             <div className="filas-esqueleto" aria-hidden="true">{[0, 1, 2, 3].map((i) => <span key={i} className="esq esq-linea" />)}</div>
           ) : movimientos.length === 0 ? (
             <Vacio icon={History} titulo="Sin movimientos">Aún no se ha registrado ningún movimiento.</Vacio>
@@ -114,6 +130,7 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+        <Paginacion pagina={pagina} total={movs.total} porPagina={POR_PAGINA} onCambiar={setPagina} unidad="movimientos" />
       </section>
     </div>
   )

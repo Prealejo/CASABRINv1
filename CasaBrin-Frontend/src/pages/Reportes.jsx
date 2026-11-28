@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  TriangleAlert, Filter, SearchX, ChevronLeft, ChevronRight, ChevronDown, Download, Printer, X,
+  TriangleAlert, Filter, SearchX, ChevronDown, Download, Printer, X,
 } from 'lucide-react'
 import { api } from '../api/client.js'
 import { fmtMetros, fmtNum, fmtFecha, fmtSoloFecha, rangoUtc } from '../lib/format.js'
 import {
-  Encabezado, TipoMovimiento, EstadoBadge, UbicacionBadge, CodigoColorBadge, Vacio, Mensaje,
+  Encabezado, TipoMovimiento, EstadoBadge, UbicacionBadge, CodigoColorBadge, Vacio, Mensaje, Paginacion,
 } from '../components/ui.jsx'
 import './pages.css'
 
 const TIPOS = ['Ingreso', 'Traslado', 'Salida', 'Ajuste', 'Anulacion']
-const PAGE_SIZE = 25
+const PAGE_SIZE = 7   // registros por página
 const FILTROS_VACIOS = { tipo: '', idTela: '', rollo: '', desde: '', hasta: '' }
 
 // Lee los filtros desde la URL (?rollo=CB…&tela=3…) para que otros módulos enlacen aquí.
@@ -432,19 +432,7 @@ export default function Reportes() {
           )}
         </div>
 
-        {movs.total > 0 && (
-          <nav className="paginacion no-print" aria-label="Paginación">
-            <span className="paginacion-info">{fmtNum(movs.total)} movimientos · página {page} de {totalPaginas}</span>
-            <div className="paginacion-botones">
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => irA(page - 1)} disabled={page <= 1}>
-                <ChevronLeft size={16} strokeWidth={1.9} aria-hidden="true" />Anterior
-              </button>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => irA(page + 1)} disabled={page >= totalPaginas}>
-                Siguiente<ChevronRight size={16} strokeWidth={1.9} aria-hidden="true" />
-              </button>
-            </div>
-          </nav>
-        )}
+        <Paginacion pagina={page} total={movs.total} porPagina={PAGE_SIZE} onCambiar={irA} unidad="movimientos" />
         {movs.total > PAGE_SIZE && (
           <p className="solo-print" style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
             Página {page} de {totalPaginas}. Para el reporte completo usa «Exportar CSV».

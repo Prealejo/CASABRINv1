@@ -1,23 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import {
-  Layers, Cylinder, Ruler, TriangleAlert, PackagePlus, Tag, ArrowLeftRight, Scissors, ClipboardList,
-  History, Workflow, ChevronRight, Warehouse, Store,
-} from 'lucide-react-native'
+import { Layers, Cylinder, Ruler, TriangleAlert, PackagePlus, History, Warehouse, Store } from 'lucide-react-native'
 import { api } from '../api/client'
 import { fmtMetros, fmtNum, fmtFecha } from '../lib/format'
 import Pantalla from '../components/Pantalla'
-import { Boton, Esqueleto, Mensaje, Seccion, Tarjeta, TipoMovimiento, Vacio, Badge } from '../components/ui'
+import { Boton, Esqueleto, Mensaje, Seccion, Tarjeta, TipoMovimiento, Vacio, Badge, Paginacion } from '../components/ui'
 import { C, R, S, T } from '../theme'
 
-const FLUJO = [
-  { ruta: '/ingreso', titulo: 'Recibir', Icono: PackagePlus, desc: 'Registra la tela y sus rollos.' },
-  { ruta: '/etiquetas', titulo: 'Etiquetar', Icono: Tag, desc: 'Imprime el código de cada rollo.' },
-  { ruta: '/inventario', titulo: 'Trasladar', Icono: ArrowLeftRight, desc: 'Mueve a Local lo que sale a venta.' },
-  { ruta: '/escanear', titulo: 'Cortar', Icono: Scissors, desc: 'Escanea y descuenta metros.' },
-  { ruta: '/reportes', titulo: 'Revisar', Icono: ClipboardList, desc: 'Consulta y exporta el historial.' },
-]
+const POR_PAGINA = 7   // movimientos por página
 
 function Indicador({ icono: Icono, etiqueta, valor, alerta, children, onPress }) {
   return (
@@ -37,10 +28,17 @@ export default function Panel() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [refrescando, setRefrescando] = useState(false)
+  const [movs, setMovs] = useState(null)   // { items, total } de la página actual
+  const [pagina, setPagina] = useState(1)
 
-  const cargar = useCallback(() => api.get('/reportes/dashboard')
-    .then(({ data }) => { setData(data); setError('') })
+  const cargarMovs = useCallback((p) => api.get('/reportes/movimientos', { params: { page: p, pageSize: POR_PAGINA } })
+    .then(({ data }) => setMovs(data))
     .catch((e) => setError(e.message)), [])
+
+  const cargar = useCallback(() => Promise.all([
+    api.get('/reportes/dashboard').then(({ data }) => { setData(data); setError('') }),
+    cargarMovs(pagina),
+  ]).catch((e) => setError(e.message)), [cargarMovs, pagina])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -86,39 +84,17 @@ export default function Panel() {
         )}
       </View>
 
-      <Seccion titulo="Proceso de un rollo" icono={Workflow}>
-        <Tarjeta style={{ padding: 0 }}>
-          {FLUJO.map(({ ruta, titulo, Icono, desc }, i) => (
-            <Pressable
-              key={ruta}
-              onPress={() => router.push(ruta)}
-              style={({ pressed }) => [st.paso, i < FLUJO.length - 1 && st.pasoBorde, pressed && { backgroundColor: C.brand50 }]}
-              accessibilityRole="button"
-              accessibilityLabel={`Paso ${i + 1}: ${titulo}. ${desc}`}
-            >
-              <View style={st.pasoNum}><Text style={{ color: C.white, fontWeight: '800', fontSize: 12 }}>{i + 1}</Text></View>
-              <Icono size={18} color={C.brand600} strokeWidth={1.9} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '700', color: C.ink }}>{titulo}</Text>
-                <Text style={T.mini}>{desc}</Text>
-              </View>
-              <ChevronRight size={18} color={C.gray400} />
-            </Pressable>
-          ))}
-        </Tarjeta>
-      </Seccion>
-
       <Seccion
         titulo="Últimos movimientos"
         icono={History}
         accion={<Boton chico variante="fantasma" titulo="Ver todo" onPress={() => router.push('/reportes')} />}
       >
         <Tarjeta style={{ padding: 0 }}>
-          {!data ? (
+          {!movs ? (
             <View style={{ padding: S.lg, gap: 10 }}>{[0, 1, 2].map((i) => <Esqueleto key={i} alto={44} />)}</View>
-          ) : !data.ultimosMovimientos?.length ? (
+          ) : !movs.items.length ? (
             <Vacio icono={History}>Aún no hay movimientos registrados.</Vacio>
-          ) : data.ultimosMovimientos.map((m, i) => (
+          ) : movs.items.map((m, i) => (
             <Pressable
               key={m.idMovimiento}
               onPress={() => router.push(`/reportes?rollo=${encodeURIComponent(m.codigoBarras)}`)}
@@ -137,6 +113,7 @@ export default function Panel() {
             </Pressable>
           ))}
         </Tarjeta>
+        {movs && <Paginacion pagina={pagina} total={movs.total} porPagina={POR_PAGINA} onCambiar={setPagina} unidad="movimientos" />}
       </Seccion>
     </Pantalla>
   )
@@ -147,9 +124,6 @@ const st = StyleSheet.create({
   kpi: { width: '48.6%', backgroundColor: C.white, borderRadius: R.md, borderWidth: 1, borderColor: C.gray200, padding: S.md, gap: 2 },
   kpiIcono: { width: 34, height: 34, borderRadius: 9, backgroundColor: C.brand50, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   kpiValor: { fontSize: 24, fontWeight: '800', color: C.ink, letterSpacing: -0.3 },
-  paso: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: S.md },
-  pasoBorde: { borderBottomWidth: 1, borderBottomColor: C.gray100 },
-  pasoNum: { width: 22, height: 22, borderRadius: 11, backgroundColor: C.brand600, alignItems: 'center', justifyContent: 'center' },
   mov: { flexDirection: 'row', alignItems: 'center', gap: S.md, padding: S.md },
   movBorde: { borderTopWidth: 1, borderTopColor: C.gray100 },
 })
